@@ -396,6 +396,15 @@ class RepresentativeNotCompletedController extends Controller
     {
         $this->authorize('view_representatives_no');
         $representative = $this->service->find($id);
+        $representative->load(['training']);
+        $workStartDate = \App\Models\WorkStart::where('representative_id', $representative->id)
+            ->latest('date')
+            ->value('date');
+
+        $trainingDate = \App\Models\TrainingSession::where('representative_id', $representative->id)->first();
+
+
+
 
 
         // Process attachments to include proper URLs
@@ -461,7 +470,7 @@ class RepresentativeNotCompletedController extends Controller
         }
 
 
-        return view('representativesNotCompleted.show', compact('representative'));
+        return view('representativesNotCompleted.show', compact('representative', 'workStartDate','trainingDate'));
     }
 
     public function downloadAttachment($id, $index)

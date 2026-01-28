@@ -210,17 +210,17 @@
                                     <div class="mt-2">
                                         <div class="mb-1">
                                             <strong>اسم البنك:</strong>
-                                            <span class="badge bg-info">{{ $representative->bankAccounts?->bank?->name ?? '-' }}</span>
+                                            <span class="badge bg-info">{{ $representative->bankAccounts->first()?->bank?->name ?? '-' }}</span>
                                         </div>
 
                                         <div class="mb-1">
                                             <strong>رقم الحساب:</strong>
-                                            <span class="badge bg-info">{{ $representative->bankAccounts?->account_number ?? '-' }}</span>
+                                            <span class="badge bg-info">{{ $representative->bankAccounts->first()?->account_number ?? '-' }}</span>
                                         </div>
 
                                         <div class="mb-1">
                                             <strong>اسم صاحب الحساب:</strong>
-                                            <span class="badge bg-info">{{ $representative->bankAccounts?->account_owner_name ?? '-' }}</span>
+                                            <span class="badge bg-info">{{ $representative->bankAccounts->first()?->account_owner_name ?? '-' }}</span>
                                         </div>
 
 
@@ -338,6 +338,43 @@
                             <div class="col-md-6">
                                 <label class="fw-bold">آخر تحديث:</label>
                                 <span>{{ $representative->updated_at->format('d/m/Y H:i') }}</span>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6 mb-2">
+                                <label class="fw-bold">تاريخ التعيين:</label>
+                                <span>{{ $representative->start_date ? $representative->start_date->format('d/m/Y') : 'غير محدد' }}</span>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <label class="fw-bold">تاريخ التحويل لمندوب فعلي:</label>
+                                <span>{{ $representative->converted_to_active_date ? \Carbon\Carbon::parse($representative->converted_to_active_date)->format('d/m/Y') : 'غير محدد' }}</span>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <label class="fw-bold">تاريخ التحويل من فعلي لغير مكتمل:</label>
+                                <span>{{ $representative->converted_to_notcompleted_date ? \Carbon\Carbon::parse($representative->converted_to_notcompleted_date)->format('d/m/Y H:i') : 'غير محدد' }}</span>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <label class="fw-bold">تاريخ المحاضرة:</label>
+                                <span>{{ $trainingDate ? \Carbon\Carbon::parse($trainingDate)->format('d/m/Y') : 'غير محدد' }}</span>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <label class="fw-bold">تاريخ بدء العمل:</label>
+                                <span>{{ $workStartDate ? \Carbon\Carbon::parse($workStartDate->date)->format('d/m/Y') : 'غير محدد' }}</span>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <label class="fw-bold">تاريخ الاستقالة:</label>
+                                <span>{{ $representative->resign_date ? \Carbon\Carbon::parse($representative->resign_date)->format('d/m/Y H:i') : 'غير محدد' }}</span>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <label class="fw-bold">تاريخ التفعيل:</label>
+                                <span>{{ $representative->unresign_date ? \Carbon\Carbon::parse($representative->unresign_date)->format('d/m/Y H:i') : 'غير محدد' }}</span>
                             </div>
                         </div>
                     </div>

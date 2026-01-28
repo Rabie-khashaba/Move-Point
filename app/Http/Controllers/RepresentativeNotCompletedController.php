@@ -42,7 +42,7 @@ class RepresentativeNotCompletedController extends Controller
 
 //         $query = \App\Models\Representative::where('status', 0)->where('is_active',1)->with(['company', 'user', 'supervisors', 'location', 'governorate'])->withCount('deliveryDeposits');
 
-        
+
 //         // Search filter
 //         if ($request->filled('search')) {
 //             $search = $request->search;
@@ -53,7 +53,7 @@ class RepresentativeNotCompletedController extends Controller
 //                     ->orWhere('national_id', 'like', "%{$search}%");
 //             });
 //         }
-        
+
 //         if ($request->filled('date_from')) {
 //             $query->whereDate('start_date', '>=', $request->date_from);
 //         }
@@ -66,7 +66,7 @@ class RepresentativeNotCompletedController extends Controller
 //         if ($request->filled('company_id')) {
 //             $query->where('company_id', $request->company_id);
 //         }
-        
+
 //         if ($request->filled('missing_doc')) {
 //             $doc = $request->missing_doc;
 //         }
@@ -107,13 +107,13 @@ class RepresentativeNotCompletedController extends Controller
 //         //         $query->having('delivery_deposits_count', '<', 7);
 //         //     }
 //         // }
-        
+
 //         if ($request->filled('ready')) {
 //             if ($request->ready === 'ready') {
 //                 $query->where('is_training', 1) // لازم يكون حضر التدريب
 //                       ->having('delivery_deposits_count', '=', 7); // 7 إيداعات
 //             }
-        
+
 //             if ($request->ready === 'not_ready') {
 //                 $query->where(function ($q) {
 //                     $q->where('is_training', 0) // لسه ما حضرش
@@ -127,7 +127,7 @@ class RepresentativeNotCompletedController extends Controller
 
 
 //         //$representatives = $query->paginate(20)->appends(request()->query());
-        
+
 //         $representativesCollection = $query->get();
 
 //         if (!empty($doc)) {
@@ -187,21 +187,21 @@ class RepresentativeNotCompletedController extends Controller
 //             ->filter(fn($rep) => $rep->delivery_deposits_count == 7 && count($rep->missingDocs()) === 0) // 7 إيداعات + الأوراق كاملة
 //             ->count();
 
-        
-        
+
+
         // Base Query (بدون علاقات – فقط الفلاتر الأساسية)
             $baseQuery = Representative::where('status', 0)
                 ->where('is_active', 1)
-                ->when($request->filled('date_from'), fn($q) => 
+                ->when($request->filled('date_from'), fn($q) =>
                     $q->whereDate('start_date', '>=', $request->date_from)
                 )
-                ->when($request->filled('date_to'), fn($q) => 
+                ->when($request->filled('date_to'), fn($q) =>
                     $q->whereDate('start_date', '<=', $request->date_to)
                 )
-                ->when($request->filled('company_id'), fn($q) => 
+                ->when($request->filled('company_id'), fn($q) =>
                     $q->where('company_id', $request->company_id)
                 )
-                ->when($request->filled('employee_id'), fn($q) => 
+                ->when($request->filled('employee_id'), fn($q) =>
                     $q->where('employee_id', $request->employee_id)
                 )
                 ->when($request->filled('search'), function($q) use ($request){
@@ -212,22 +212,22 @@ class RepresentativeNotCompletedController extends Controller
                            ->orWhere('national_id', 'like', "%{$request->search}%");
                     });
                 });
-        
+
             // --------------------------
             //     DOCS Filter (JSON)
             // --------------------------
             if ($request->filled('docs')) {
                 $requiredCount = count(Representative::requiredDocs());
-        
+
                 if ($request->docs === 'completed') {
                     $baseQuery->whereRaw("JSON_LENGTH(attachments) = ?", [$requiredCount]);
                 }
-        
+
                 if ($request->docs === 'NotCompleted') {
                     $baseQuery->whereRaw("JSON_LENGTH(attachments) < ?", [$requiredCount]);
                 }
             }
-        
+
             // --------------------------
             //     Training Filter
             // --------------------------
@@ -235,23 +235,23 @@ class RepresentativeNotCompletedController extends Controller
                 if ($request->training === 'attended') {
                     $baseQuery->where('is_training', 1);
                 }
-        
+
                 if ($request->training === 'not_attended') {
                     $baseQuery->where('is_training', 0);
                 }
             }
-        
+
             // --------------------------
             //     Ready Filter
             // --------------------------
             if ($request->filled('ready')) {
                 $baseQuery->withCount('deliveryDeposits');
-        
+
                 if ($request->ready === 'ready') {
                     $baseQuery->where('is_training', 1)
                               ->having('delivery_deposits_count', 7);
                 }
-        
+
                 if ($request->ready === 'not_ready') {
                     $baseQuery->where(function ($q) {
                         $q->where('is_training', 0)
@@ -259,32 +259,32 @@ class RepresentativeNotCompletedController extends Controller
                     });
                 }
             }
-            
+
                             // Documents received filter
             if ($request->filled('document_received')) {
                 $baseQuery->where('documents_received', $request->document_received);
             }
-        
+
             // ----------------------------------
             //        Missing One Doc Filter
             // ----------------------------------
             $collection = (clone $baseQuery)->get();
-        
+
             if ($request->filled('missing_doc')) {
                 $doc = $request->missing_doc;
-        
-                $collection = $collection->filter(fn($rep) => 
+
+                $collection = $collection->filter(fn($rep) =>
                     in_array($doc, $rep->missingDocs())
                 );
             }
-        
+
             // ----------------------------------
             //       Manual Pagination
             // ----------------------------------
             $page = $request->get('page', 1);
             $perPage = 20;
             $total = $collection->count();
-        
+
             $representatives = new \Illuminate\Pagination\LengthAwarePaginator(
                 $collection->forPage($page, $perPage),
                 $total,
@@ -292,26 +292,26 @@ class RepresentativeNotCompletedController extends Controller
                 $page,
                 ['path' => $request->url(), 'query' => $request->query()]
             );
-        
+
             // ----------------------------------
             //            STATISTICS
             // ----------------------------------
             $requiredDocs = count(Representative::requiredDocs());
-        
+
             $totalNotCompleted = (clone $baseQuery)->count();
-        
+
             $missingDocsCount = (clone $baseQuery)->get()
                 ->filter(fn($rep) => count($rep->missingDocs()) > 0)
                 ->count();
-        
+
             $notTrainedCount = (clone $baseQuery)->where('is_training', 0)->count();
-        
+
             $trainedCount = (clone $baseQuery)->where('is_training', 1)->count();
-        
+
             $readyToWorkCount = (clone $baseQuery)
                 ->withCount('deliveryDeposits')
                 ->get()
-                ->filter(fn($rep) => 
+                ->filter(fn($rep) =>
                     $rep->is_training == 1 &&
                     $rep->delivery_deposits_count == 7 &&
                     count($rep->missingDocs()) == 0
@@ -336,7 +336,7 @@ class RepresentativeNotCompletedController extends Controller
         $companies = Company::where('is_active', true)->get();
         $governorates = Governorate::all();
         $locations = Location::all();
-        
+
         $users = User::where('type','employee')->whereHas('employee', function ($query) {
                 $query->where('department_id', 7)->where('is_active', true);
             })->get();
@@ -555,7 +555,7 @@ class RepresentativeNotCompletedController extends Controller
     //             }
 
     //             if ($foundPath) {
-                    
+
     //                 $storageUrl = asset('storage/app/public/' . $foundPath);
     //                 return redirect($storageUrl);
     //             } else {
@@ -575,8 +575,8 @@ class RepresentativeNotCompletedController extends Controller
     //         abort(500, 'حدث خطأ أثناء عرض الملف');
     //     }
     // }
-    
-    
+
+
 public function viewAttachment($id, $index)
 {
     try {
@@ -620,11 +620,11 @@ public function viewAttachment($id, $index)
         $companies = Company::where('is_active', true)->get();
         $governorates = Governorate::all();
         $locations = Location::all();
-        
+
         $users = User::where('type','employee')->whereHas('employee', function ($query) {
                 $query->where('department_id', 7)->where('is_active', true);
             })->get();
-            
+
         return view('representativesNotCompleted.edit', compact('representative', 'companies', 'governorates', 'locations' , 'users'));
     }
 
@@ -656,7 +656,7 @@ public function viewAttachment($id, $index)
             'employee_id' => 'required|exists:users,id',
             'is_supervisor' => 'boolean', // ← أضفناها
         ]);
-        
+
 
         $representative = $this->service->update($id, $validated);
         //return redirect()->route('representatives-not-completed.index')->with('success', 'تم تحديث المندوب بنجاح!');
@@ -695,15 +695,15 @@ public function viewAttachment($id, $index)
 
     public function StartRealRepresentative(Request $request,$id)
     {
-        
+
         //return $request;
-        
+
         $request->validate([
             'date' => 'required|date',
             'message_id' => 'required',
         ]);
-        
-        
+
+
 
         $representative = Representative::find($id);
         $representative->status = 1; // جعلها 1 دائماً
@@ -724,7 +724,7 @@ public function viewAttachment($id, $index)
 
     public function representative(Request $request,$id)
     {
-        
+
         //return $request;
         $request->validate([
             'date' => 'required|date',
@@ -736,6 +736,7 @@ public function viewAttachment($id, $index)
         $representative->status = 1; // جعلها 1 دائماً
         //$representative->converted_to_active_date = now()->toDateString(); // إضافة تاريخ التحويل
         $representative->converted_to_active_date = $request->date; // إضافة تاريخ التحويل
+        $representative->converted_to_notcompleted_date = null;
         $representative->converted_active_by = auth()->id();
 
 
@@ -782,10 +783,10 @@ public function viewAttachment($id, $index)
                 'message_id' => $message->id,
                 'date' => $request->date,
                 'type' => $request->type,
-                
+
             ]
         );
-        
+
         $description = '';
         $link = null;
 
@@ -796,10 +797,10 @@ public function viewAttachment($id, $index)
             $description = $message->description_location;
             $link = $message->google_map_url;
         }
-        
+
         $representative->update([
             'company_id'=>$request->company_id,
-            ]); 
+            ]);
         // إرسال الواتساب بالوصف والرابط المناسب
         $whatsappResult = $this->whatsappService->send(
             $representative->phone,
@@ -885,8 +886,8 @@ public function viewAttachment($id, $index)
         return back()->with('success', 'تم حفظ الملاحظة بنجاح');
 
     }
-    
-    
+
+
      public function representative2(Request $request,$id)
     {
         $this->authorize('edit_representatives_no');
@@ -906,8 +907,8 @@ public function viewAttachment($id, $index)
         $status = $representative->status ? 'مندوب غير فعلي' : 'مندوب فعلي';
         return redirect()->route('representatives-not-completed.index')->with('success', "تم تغيير حالة المندوب إلى: {$status}");
     }
-    
-    
+
+
      public function resignation(Request $request, $id)
     {
         //return $request;
@@ -938,7 +939,7 @@ public function viewAttachment($id, $index)
 
         return redirect()->route('representatives-not-completed.index')->with('success', "تم تغيير حالة المندوب إلى: استقالة");
     }
-    
+
     public function export(Request $request)
     {
         $filters = $request->all();
@@ -953,4 +954,3 @@ public function viewAttachment($id, $index)
 
 
 }
-

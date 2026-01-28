@@ -205,6 +205,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('representatives.change-password');
     Route::post('representatives/{id}/toggle-status', [RepresentativeController::class, 'toggleStatus'])
         ->name('representatives.toggle-status');
+    Route::post('representatives/{id}/mark-not-completed', [RepresentativeController::class, 'markNotCompleted'])
+        ->name('representatives.mark-not-completed');
     Route::get('representatives/locations/{governorateId}', [RepresentativeController::class, 'getLocationsByGovernorate'])
         ->name('representatives.locations-by-governorate');
     Route::get('representatives/{id}/attachment/{index}/view', [RepresentativeController::class, 'viewAttachment'])

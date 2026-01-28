@@ -109,7 +109,7 @@ class SalaryRecord1Controller extends Controller
         $count = salary_records1::whereIn('id', $request->ids)->delete();
 
         return back()->with('success', "تم حذف {$count} سجل بنجاح");
-    } 
+    }
 
     private function syncDebtsFromSalary(string $month): void
     {

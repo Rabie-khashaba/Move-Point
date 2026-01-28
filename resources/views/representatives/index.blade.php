@@ -213,6 +213,7 @@
                                             <th>المشرف المسؤول</th>
                                             <th>القائم  بالتحويل</th>
                                             <th>عدد الايصالات</th>
+                                            <th>الأوراق الناقصه</th>
                                             <th>استلام الاوراق</th>
                                             <th>الإجراءات</th>
                                         </tr>
@@ -271,7 +272,16 @@
                                                 <span class="badge bg-primary">{{ $representative->delivery_deposits_count }}</span>
 
                                             </td>
-                                    <       <td>
+                                            <td>
+                                                @if(count($representative->missingDocs()) > 0)
+                                                    @foreach($representative->missingDocs() as $doc)
+                                                            <span>{{ $doc }}</span><br>
+                                                    @endforeach
+                                                @else
+                                                    <span class="badge bg-success">كل الأوراق مكتملة</span>
+                                                @endif
+                                            </td>
+                                            <td>
                                                @if($representative->documents_received === 'received')
                                                   <span class="text-success fw-bold">
                                                         تم استلام الأوراق
@@ -313,6 +323,15 @@
                                                                 data-toggle-status="{{ $representative->is_active ? 'deactivate' : 'activate' }}"
                                                                 title="{{ $representative->is_active ? 'إيقاف' : 'تفعيل' }}">
                                                             <i class="feather-{{ $representative->is_active ? 'pause' : 'play' }}"></i>
+                                                        </button>
+                                                    </form>
+                                                    @endcan
+
+                                                    @can('edit_representatives')
+                                                    <form action="{{ route('representatives.mark-not-completed', $representative->id) }}" method="POST" style="display: inline;" onsubmit="return confirm('هل أنت متأكد من تحويل المندوب إلى غير مكتمل؟');">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="تحويل لغير مكتمل">
+                                                            <i class="feather-user-x"></i>
                                                         </button>
                                                     </form>
                                                     @endcan

@@ -41,6 +41,7 @@ class Representative extends Model
         'unresign_by',
         'converted_to_active_date',
         'converted_active_by',
+        'converted_to_notcompleted_date',
         'documents_received',
     ];
 

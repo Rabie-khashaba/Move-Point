@@ -402,8 +402,10 @@ class RepresentativeController extends Controller
         $this->authorize('edit_representatives');
         $representative = $this->service->find($id);
 
+        $newStatus = !$representative->is_active;
+
         $representative->update([
-            'is_active' => !$representative->is_active
+            'is_active' => $newStatus,
         ]);
 
         // Sync user table status
@@ -418,6 +420,21 @@ class RepresentativeController extends Controller
         return redirect()->route('representatives.index')->with('success', "تم تغيير حالة المندوب إلى: {$status}");
     }
 
+
+    public function markNotCompleted($id)
+    {
+        $this->authorize('edit_representatives');
+        $representative = $this->service->find($id);
+
+        $representative->update([
+            'status' => 0,
+            'converted_to_active_date' => null,
+            'converted_to_notcompleted_date'=> now()
+        ]);
+
+        return redirect()->route('representatives.index')
+            ->with('success', 'تم تحويل المندوب الي مندوب  غير مكتمل');
+    }
 
     public function export(Request $request)
     {

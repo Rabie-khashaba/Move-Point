@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Http\Controllers;
 
@@ -606,3 +606,4 @@ class LeadController extends Controller
         return view('leads.search', compact('lead', 'phone', 'representative'));
     }
 }
+

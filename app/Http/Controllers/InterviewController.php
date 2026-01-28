@@ -8,6 +8,7 @@ use App\Models\Lead;
 use App\Models\Message;
 use App\Models\User;
 use App\Services\WhatsAppService;
+use App\Services\WhatsAppServicebyair;
 use App\Services\LeadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -20,7 +21,7 @@ class InterviewController extends Controller
 {
     protected $whatsappService  ,$service;
 
-    public function __construct(WhatsAppService $whatsappService , LeadService $service)
+    public function __construct(WhatsAppServicebyair $whatsappService , LeadService $service)
     {
         $this->whatsappService = $whatsappService;
         $this->service = $service;
@@ -308,10 +309,23 @@ class InterviewController extends Controller
         try {
             $interview = Interview::with(['lead', 'message'])->findOrFail($id);
 
-            // Send WhatsApp message with Google Maps URL
-            $result = $this->whatsappService->send($interview->lead->phone, $interview->message->description, $interview->date_interview, $interview->message->google_map_url);
+            $employee = auth()->user()?->employee;
+            $deviceToken = $employee?->device?->device_token;
 
-            if ($result) {
+            $whatsapp = app(\App\Services\WhatsAppServicebyair::class);
+            $result = $whatsapp->send(
+                $interview->lead->phone,
+                $interview->message->description,
+                $interview->date_interview,
+                $interview->message->google_map_url,
+                $deviceToken
+            );
+
+
+            // Send WhatsApp message with Google Maps URL
+           // $result = $this->whatsappService->send($interview->lead->phone, $interview->message->description, $interview->date_interview, $interview->message->google_map_url);
+
+            if (isset($result['success']) && $result['success'] === true) {
                 return response()->json([
                     'success' => true,
                     'message' => 'تم إرسال رسالة واتساب بنجاح'
@@ -319,7 +333,7 @@ class InterviewController extends Controller
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'فشل في إرسال رسالة واتساب'
+                    'message' => $result['message'] ?? 'فشل في إرسال رسالة واتساب'
                 ]);
             }
         } catch (\Exception $e) {

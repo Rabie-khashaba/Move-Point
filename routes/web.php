@@ -162,6 +162,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('bank-accounts/import', [\App\Http\Controllers\BankAccountController::class, 'import'])
         ->name('bank-accounts.import');
     Route::resource('bank-accounts', \App\Http\Controllers\BankAccountController::class);
+    Route::get('wallet-accounts', [\App\Http\Controllers\WalletAccountController::class, 'index'])
+        ->name('wallet-accounts.index');
 
 
     Route::get('/interviews/export', [InterviewController::class, 'export'])->name('interviews.export');

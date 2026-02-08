@@ -437,12 +437,26 @@
                 @endcanany
 
 
-                <li class="nxl-item">
-                    <a href="{{ route('bank-accounts.index') }}"
-                        class="nxl-link {{ request()->routeIs('bank-accounts.*') ? 'active' : '' }}">
+                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('bank-accounts.*') || request()->routeIs('wallet-accounts.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0);" class="nxl-link">
                         <span class="nxl-micon"><i class="feather-credit-card"></i></span>
                         <span class="nxl-mtext">الحسابات البنكية</span>
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
                     </a>
+                    <ul class="nxl-submenu" style="{{ request()->routeIs('bank-accounts.*') || request()->routeIs('wallet-accounts.*') ? 'display:block;' : '' }}">
+                        <li class="nxl-item">
+                            <a href="{{ route('bank-accounts.index') }}"
+                                class="nxl-link {{ request()->routeIs('bank-accounts.*') ? 'active' : '' }}">
+                                <span class="nxl-mtext">الحسابات البنكية</span>
+                            </a>
+                        </li>
+                        <li class="nxl-item">
+                            <a href="{{ route('wallet-accounts.index') }}"
+                                class="nxl-link {{ request()->routeIs('wallet-accounts.*') ? 'active' : '' }}">
+                                <span class="nxl-mtext">المحافظ الالكترونية</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 @can('view_settings')

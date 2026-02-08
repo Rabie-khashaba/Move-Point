@@ -27,6 +27,10 @@ class BankAccountImport implements ToCollection, WithHeadingRow, WithCalculatedF
         'account_owner_name' => 'account_owner_name',
         'اسم صاحب الحساب' => 'account_owner_name',
         'اسم صاحب الحساب البنكي' => 'account_owner_name',
+        'bank id' => 'bank_id',
+        'bank_id' => 'bank_id',
+        'معرف البنك' => 'bank_id',
+        'رقم البنك' => 'bank_id',
         'bank' => 'bank_name',
         'bank name' => 'bank_name',
         'bank_name' => 'bank_name',
@@ -68,18 +72,30 @@ class BankAccountImport implements ToCollection, WithHeadingRow, WithCalculatedF
             }
 
             $bankId = null;
-            $bankName = $data['bank_name'] ?? null;
-            if ($bankName !== null && $bankName !== '') {
-                $bank = Bank::where('name', $bankName)->first();
-                if (!$bank) {
+            if (isset($data['bank_id']) && $data['bank_id'] !== null && $data['bank_id'] !== '') {
+                $bankId = (int) $data['bank_id'];
+                if (!Bank::where('id', $bankId)->exists()) {
                     $this->failures[] = [
                         'row' => $index + 2,
-                        'errors' => ['اسم البنك غير موجود'],
+                        'errors' => ['معرف البنك غير موجود'],
                     ];
                     $this->skipped++;
                     continue;
                 }
-                $bankId = $bank->id;
+            } else {
+                $bankName = $data['bank_name'] ?? null;
+                if ($bankName !== null && $bankName !== '') {
+                    $bank = Bank::where('name', $bankName)->first();
+                    if (!$bank) {
+                        $this->failures[] = [
+                            'row' => $index + 2,
+                            'errors' => ['اسم البنك غير موجود'],
+                        ];
+                        $this->skipped++;
+                        continue;
+                    }
+                    $bankId = $bank->id;
+                }
             }
 
             $accountOwner = $data['account_owner_name'] ?? null;

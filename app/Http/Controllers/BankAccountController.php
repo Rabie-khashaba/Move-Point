@@ -8,6 +8,7 @@ use App\Models\Representative;
 use App\Models\Governorate;
 use App\Models\Location;
 use App\Exports\BankAccountsExport;
+use App\Imports\BankAccountImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
@@ -45,6 +46,20 @@ class BankAccountController extends Controller
             $query->where('status', $request->status);
         }
 
+        // فلترة بحالة الكود (يمتلك كود / لا يمتلك كود)
+        if ($request->filled('code_status')) {
+            $codeStatus = $request->code_status;
+            $query->whereHas('representative', function ($q) use ($codeStatus) {
+                if ($codeStatus === 'with') {
+                    $q->whereNotNull('code')->where('code', '!=', '');
+                } elseif ($codeStatus === 'without') {
+                    $q->where(function ($x) {
+                        $x->whereNull('code')->orWhere('code', '');
+                    });
+                }
+            });
+        }
+
         // البحث (الاسم / رقم الهاتف / رقم البطاقة / الكود / رقم الحساب)
         if ($request->filled('search')) {
             $search = $request->search;
@@ -59,6 +74,15 @@ class BankAccountController extends Controller
             });
         }
 
+        // Statistics (based on current filters)
+        $statsQuery = clone $query;
+        $totalBankAccounts = (clone $statsQuery)->count();
+        $withAccountCount = (clone $statsQuery)->where('status', 'يمتلك حساب')->count();
+        $withoutAccountCount = (clone $statsQuery)->where('status', 'لا يمتلك حساب')->count();
+        $withoutCodeCount = (clone $statsQuery)->whereHas('representative', function ($q) {
+            $q->whereNull('code')->orWhere('code', '');
+        })->count();
+
         $bankAccounts = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
 
         // البيانات للفلاتر
@@ -66,7 +90,16 @@ class BankAccountController extends Controller
         $governorates = Governorate::all();
         $locations = Location::all();
 
-        return view('bank_accounts.index', compact('bankAccounts', 'banks', 'governorates', 'locations'));
+        return view('bank_accounts.index', compact(
+            'bankAccounts',
+            'banks',
+            'governorates',
+            'locations',
+            'totalBankAccounts',
+            'withAccountCount',
+            'withoutAccountCount',
+            'withoutCodeCount'
+        ));
     }
 
     /**
@@ -197,5 +230,27 @@ class BankAccountController extends Controller
     {
         $fileName = 'bank_accounts_' . now()->format('Y_m_d_His') . '.xlsx';
         return Excel::download(new BankAccountsExport($request->all()), $fileName);
+    }
+
+    /**
+     * Import bank accounts from XLSX/CSV.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv',
+        ]);
+
+        $import = new BankAccountImport();
+        $import->import($request->file('file'));
+
+        $imported = $import->getImportedCount();
+        $skipped = $import->getSkippedCount();
+        $failures = $import->getFailures();
+
+        return redirect()
+            ->route('bank-accounts.index')
+            ->with('success', "تم الاستيراد بنجاح.")
+            ->with('import_failures', $failures);
     }
 }

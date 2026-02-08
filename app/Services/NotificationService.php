@@ -14,7 +14,7 @@ class NotificationService
     public function createNotification($userIds, $title, $body, $type = 'general', $data = null)
     {
         $notifications = [];
-        
+
         foreach ((array) $userIds as $userId) {
             $notifications[] = AppNotification::create([
                 'user_id' => $userId,
@@ -25,7 +25,7 @@ class NotificationService
                 'is_read' => false,
             ]);
         }
-        
+
         return $notifications;
     }
 
@@ -62,12 +62,12 @@ class NotificationService
     public function getUnreadCount($userId = null)
     {
         $userId = $userId ?? Auth::id();
-        
+
         // Security: ensure user can only access their own notifications
         if ($userId !== Auth::id()) {
             throw new \Exception('غير مصرح بالوصول إلى إشعارات المستخدمين الآخرين');
         }
-        
+
         return AppNotification::where('user_id', $userId)
             ->where('is_read', false)
             ->count();
@@ -79,12 +79,12 @@ class NotificationService
     public function getRecentNotifications($userId = null, $limit = 10)
     {
         $userId = $userId ?? Auth::id();
-        
+
         // Security: ensure user can only access their own notifications
         if ($userId !== Auth::id()) {
             throw new \Exception('غير مصرح بالوصول إلى إشعارات المستخدمين الآخرين');
         }
-        
+
         return AppNotification::where('user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->limit($limit)
@@ -97,16 +97,16 @@ class NotificationService
     public function markAsRead($notificationId, $userId = null)
     {
         $userId = $userId ?? Auth::id();
-        
+
         $notification = AppNotification::where('id', $notificationId)
             ->where('user_id', $userId)
             ->first();
-            
+
         if ($notification) {
             $notification->markAsRead();
             return true;
         }
-        
+
         return false;
     }
 
@@ -116,12 +116,12 @@ class NotificationService
     public function markAllAsRead($userId = null)
     {
         $userId = $userId ?? Auth::id();
-        
+
         // Security: ensure user can only access their own notifications
         if ($userId !== Auth::id()) {
             throw new \Exception('غير مصرح بالوصول إلى إشعارات المستخدمين الآخرين');
         }
-        
+
         return AppNotification::where('user_id', $userId)
             ->where('is_read', false)
             ->update([
@@ -136,16 +136,16 @@ class NotificationService
     public function getNotificationStats($userId = null)
     {
         $userId = $userId ?? Auth::id();
-        
+
         // Security: ensure user can only access their own notifications
         if ($userId !== Auth::id()) {
             throw new \Exception('غير مصرح بالوصول إلى إشعارات المستخدمين الآخرين');
         }
-        
+
         $total = AppNotification::where('user_id', $userId)->count();
         $unread = AppNotification::where('user_id', $userId)->where('is_read', false)->count();
         $read = $total - $unread;
-        
+
         return [
             'total' => $total,
             'unread' => $unread,
@@ -159,21 +159,21 @@ class NotificationService
     public function notifyLeaveRequest($leaveRequest, $action = 'created')
     {
         $requesterName = $this->getRequesterName($leaveRequest);
-        
+
         $title = match($action) {
             'created' => 'طلب إجازة جديد',
             'approved' => 'تمت الموافقة على طلب إجازة',
             'rejected' => 'تم رفض طلب إجازة',
             default => 'تحديث في طلب إجازة'
         };
-        
+
         $body = match($action) {
             'created' => "تم تقديم طلب إجازة من {$requesterName}",
             'approved' => "تمت الموافقة على طلب إجازة من {$requesterName}",
             'rejected' => "تم رفض طلب إجازة من {$requesterName}",
             default => "تم تحديث طلب إجازة من {$requesterName}"
         };
-        
+
         $data = [
             'leave_request_id' => $leaveRequest->id,
             'requester_name' => $requesterName,
@@ -181,7 +181,7 @@ class NotificationService
             'start_date' => $leaveRequest->start_date,
             'end_date' => $leaveRequest->end_date,
         ];
-        
+
         if ($action === 'created') {
             // Only notify admins for new requests
             $this->notifyUserTypes(['admin'], $title, $body, 'leave_request', $data);
@@ -200,28 +200,28 @@ class NotificationService
     public function notifyAdvanceRequest($advanceRequest, $action = 'created')
     {
         $requesterName = $this->getRequesterName($advanceRequest);
-        
+
         $title = match($action) {
             'created' => 'طلب سلفة جديد',
             'approved' => 'تمت الموافقة على طلب سلفة',
             'rejected' => 'تم رفض طلب سلفة',
             default => 'تحديث في طلب سلفة'
         };
-        
+
         $body = match($action) {
-            'created' => "تم تقديم طلب سلفة من {$requesterName} بمبلغ {$advanceRequest->amount} جنيه",
-            'approved' => "تمت الموافقة على طلب سلفة من {$requesterName} بمبلغ {$advanceRequest->amount} جنيه",
-            'rejected' => "تم رفض طلب سلفة من {$requesterName} بمبلغ {$advanceRequest->amount} جنيه",
+            'created' => "تم تقديم طلب سلفة من {$requesterName} بمبلغ {$advanceRequest->amount}",
+            'approved' => "تمت الموافقة على طلب سلفة من {$requesterName} بمبلغ {$advanceRequest->amount} ",
+            'rejected' => "تم رفض طلب سلفة من {$requesterName} بمبلغ {$advanceRequest->amount} ",
             default => "تم تحديث طلب سلفة من {$requesterName}"
         };
-        
+
         $data = [
             'advance_request_id' => $advanceRequest->id,
             'requester_name' => $requesterName,
             'action' => $action,
             'amount' => $advanceRequest->amount,
         ];
-        
+
         if ($action === 'created') {
             // Only notify admins for new requests
             $this->notifyUserTypes(['admin'], $title, $body, 'advance_request', $data);
@@ -240,28 +240,28 @@ class NotificationService
     public function notifyResignationRequest($resignationRequest, $action = 'created')
     {
         $requesterName = $this->getRequesterName($resignationRequest);
-        
+
         $title = match($action) {
             'created' => 'طلب استقالة جديد',
             'approved' => 'تمت الموافقة على طلب استقالة',
             'rejected' => 'تم رفض طلب استقالة',
             default => 'تحديث في طلب استقالة'
         };
-        
+
         $body = match($action) {
             'created' => "تم تقديم طلب استقالة من {$requesterName}",
             'approved' => "تمت الموافقة على طلب استقالة من {$requesterName}",
             'rejected' => "تم رفض طلب استقالة من {$requesterName}",
             default => "تم تحديث طلب استقالة من {$requesterName}"
         };
-        
+
         $data = [
             'resignation_request_id' => $resignationRequest->id,
             'requester_name' => $requesterName,
             'action' => $action,
             'resignation_date' => $resignationRequest->resignation_date,
         ];
-        
+
         if ($action === 'created') {
             // Only notify admins for new requests
             $this->notifyUserTypes(['admin'], $title, $body, 'resignation_request', $data);
@@ -280,21 +280,21 @@ class NotificationService
     public function notifyDeliveryDeposit($deliveryDeposit, $action = 'created')
     {
         $requesterName = $this->getRequesterName($deliveryDeposit);
-        
+
         $title = match($action) {
             'created' => 'إيداع تسليم جديد',
             'approved' => 'تمت الموافقة على إيداع تسليم',
             'rejected' => 'تم رفض إيداع تسليم',
             default => 'تحديث في إيداع تسليم'
         };
-        
+
         $body = match($action) {
-            'created' => "تم تقديم إيداع تسليم من {$requesterName} بمبلغ {$deliveryDeposit->amount} جنيه",
-            'approved' => "تمت الموافقة على إيداع تسليم من {$requesterName} بمبلغ {$deliveryDeposit->amount} جنيه",
-            'rejected' => "تم رفض إيداع تسليم من {$requesterName} بمبلغ {$deliveryDeposit->amount} جنيه",
+            'created' => "تم تقديم إيداع تسليم من {$requesterName}  {$deliveryDeposit->amount} ",
+            'approved' => "تمت الموافقة على إيداع تسليم من {$requesterName}  {$deliveryDeposit->amount} ",
+            'rejected' => "تم رفض إيداع تسليم من {$requesterName}  {$deliveryDeposit->amount}",
             default => "تم تحديث إيداع تسليم من {$requesterName}"
         };
-        
+
         $data = [
             'delivery_deposit_id' => $deliveryDeposit->id,
             'requester_name' => $requesterName,
@@ -302,7 +302,7 @@ class NotificationService
             'amount' => $deliveryDeposit->amount,
             'orders_count' => $deliveryDeposit->orders_count ?? null,
         ];
-        
+
         if ($action === 'created') {
             // Only notify admins for new requests
             $this->notifyUserTypes(['admin'], $title, $body, 'delivery_deposit', $data);
@@ -328,7 +328,7 @@ class NotificationService
         } elseif ($request->supervisor) {
             return $request->supervisor->name ?? 'مشرف غير معروف';
         }
-        
+
         // Handle DeliveryDeposit
         if (method_exists($request, 'employee') && $request->employee) {
             return $request->employee->name ?? 'موظف غير معروف';
@@ -337,7 +337,7 @@ class NotificationService
         } elseif (method_exists($request, 'supervisor') && $request->supervisor) {
             return $request->supervisor->name ?? 'مشرف غير معروف';
         }
-        
+
         return 'مستخدم غير معروف';
     }
 
@@ -354,7 +354,7 @@ class NotificationService
         } elseif ($request->supervisor) {
             return $request->supervisor->user_id ?? null;
         }
-        
+
         // Handle DeliveryDeposit
         if (method_exists($request, 'employee') && $request->employee) {
             return $request->employee->user_id ?? null;
@@ -363,7 +363,7 @@ class NotificationService
         } elseif (method_exists($request, 'supervisor') && $request->supervisor) {
             return $request->supervisor->user_id ?? null;
         }
-        
+
         return null;
     }
 }

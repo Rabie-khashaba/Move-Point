@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers;
 
@@ -356,6 +356,14 @@ class InterviewController extends Controller
             ]);
 
             $lead = \App\Models\Lead::findOrFail($request->lead_id);
+            // Use lead assignee; fallback to current user if lead is unassigned.
+            $assignedTo = $lead->assigned_to ?? auth()->id();
+            if (!$assignedTo) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لا يمكن جدولة المقابلة لأن المستخدم المسؤول غير محدد.'
+                ], 422);
+            }
 
             // Create the interview بنفس الموظف المعين للـ lead
             $interview = Interview::create([
@@ -363,7 +371,7 @@ class InterviewController extends Controller
                 'message_id'     => $validated['message_id'],
                 'supervisor_id'     => $validated['supervisor_id'],
                 'date_interview' => $validated['date_interview'],
-                'assigned_to'    => $lead->assigned_to, // 👈 نفس assign بتاع lead
+                'assigned_to'    => $assignedTo, // lead assignee or current user
             ]);
 
             // Update lead status to "حالة مقابلة"
@@ -514,3 +522,8 @@ public function getSupervisors(Request $request)
 
 
 }
+
+
+
+
+

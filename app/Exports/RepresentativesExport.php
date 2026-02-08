@@ -59,7 +59,7 @@ class RepresentativesExport implements FromCollection, WithHeadings
                 'الموظف'               => $rep->employee->name ?? 'غير محدد',
                 'المشرف' => optional($rep->current_supervisor)->name ?? 'غير محدد',
                 'عدد الإيصالات'        => $rep->delivery_deposits_count,
-                'تاريخ الإنشاء'        => $rep->created_at->format('Y-m-d'),
+                'تاريخ الإنشاء'        => $rep->created_at ? $rep->created_at->format('Y-m-d') : '',
             ];
         });
     }

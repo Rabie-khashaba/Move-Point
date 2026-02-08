@@ -22,6 +22,80 @@
     <!-- [ page-header ] end -->
 
 
+
+    <!-- Statistics Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <label class="fw-bold mb-3 d-block">الإحصائيات:</label>
+            <div class="row g-3">
+                <div class="col-lg-3 col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar-text avatar-xl rounded">
+                                    <i class="feather-layers"></i>
+                                </div>
+                                <div>
+                                    <span class="d-block fw-bold">الإجمالي</span>
+                                    <span class="fs-24 fw-bolder">{{ $totalBankAccounts }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar-text avatar-xl rounded bg-success text-white">
+                                    <i class="feather-check-circle"></i>
+                                </div>
+                                <div>
+                                    <span class="d-block fw-bold">يمتلك حساب</span>
+                                    <span class="fs-24 fw-bolder">{{ $withAccountCount }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar-text avatar-xl rounded bg-danger text-white">
+                                    <i class="feather-x-circle"></i>
+                                </div>
+                                <div>
+                                    <span class="d-block fw-bold">لا يمتلك حساب</span>
+                                    <span class="fs-24 fw-bolder">{{ $withoutAccountCount }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar-text avatar-xl rounded bg-warning text-white">
+                                    <i class="feather-alert-circle"></i>
+                                </div>
+                                <div>
+                                    <span class="d-block fw-bold">لا يمتلك كود</span>
+                                    <span class="fs-24 fw-bolder">{{ $withoutCodeCount }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Filters Section -->
     <div class="collapse show" id="filterCollapse">
         <div class="card mb-4">
@@ -95,6 +169,16 @@
                         </select>
                     </div>
 
+                    <!-- فلتر الكود -->
+                    <div class="col-md-2">
+                        <label class="form-label">كود المندوب</label>
+                        <select name="code_status" class="form-control">
+                            <option value="">الكل</option>
+                            <option value="with" {{ request('code_status') == 'with' ? 'selected' : '' }}>يمتلك كود</option>
+                            <option value="without" {{ request('code_status') == 'without' ? 'selected' : '' }}>لا يمتلك كود</option>
+                        </select>
+                    </div>
+
 
 
                     <div class="col-md-2 d-flex align-items-end">
@@ -103,6 +187,51 @@
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
+
+
+
+
+
+    <!-- Import Section -->
+    <style>
+        .import-card {
+            border: 1px dashed #d0d5dd;
+            background: #f9fafb;
+        }
+        .import-title {
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .import-hint {
+            font-size: 12px;
+        }
+    </style>
+    <div class="card mb-4 import-card shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <div class="import-title">استيراد الحسابات البنكية من Excel</div>
+                    <div class="text-muted import-hint">الأعمدة المطلوبة: الكود، اسم صاحب الحساب، البنك، رقم الحساب</div>
+                </div>
+                <span class="badge bg-primary-subtle text-primary">Excel / CSV</span>
+            </div>
+            <form method="POST" action="{{ route('bank-accounts.import') }}" enctype="multipart/form-data" class="row g-3 align-items-end">
+                @csrf
+                <div class="col-md-6">
+                    <label class="form-label">ملف الاستيراد</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="feather-upload"></i></span>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="feather-upload me-1"></i>استيراد الآن
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -130,6 +259,15 @@
                         @if(session('error'))
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                                 {{ session('error') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        @endif
+                        @if(session('import_failures') && count(session('import_failures')) > 0)
+                            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                                <strong>تم تخطي بعض الصفوف:</strong>
+                                @foreach(session('import_failures') as $failure)
+                                    <div>صف {{ $failure['row'] }}: {{ implode('، ', $failure['errors']) }}</div>
+                                @endforeach
                                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
                         @endif
@@ -193,7 +331,8 @@
                                             </td>
 
                                             <td>
-                                                {{ $bankAccount->account_number }}
+                                                <span>رقم الحساب: {{ $bankAccount->account_number }}</span> <br>
+                                                <span class="text-muted ms-2">حساب المحفظة: {{ $bankAccount->representative->bank_account ?? 'غير محدد' }}</span>
                                             </td>
 
                                             <td>
@@ -308,4 +447,3 @@
     }
 </script>
 @endsection
-

@@ -58,6 +58,37 @@ class WhatsAppServicebyair
         return $message;
     }
 
+
+    private function formatMessage2($messageText, $interviewDate = null, $googleMapUrl = null, $trainingDate = null)
+    {
+        $message = "مرحباً،\n\n";
+        $message .= $messageText . "\n\n";
+
+        if ($trainingDate) {
+            $formattedTrainingDate = \Carbon\Carbon::parse($trainingDate)->format('d/m/Y H:i');
+            $message .= "📚 تاريخ بدء التدريب: " . $formattedTrainingDate . "\n\n";
+
+            if ($googleMapUrl) {
+                $message .= "📍 مكان بدء التدريب على الخريطة:\n";
+                $message .= $googleMapUrl . "\n\n";
+            }
+        }
+
+        if ($interviewDate) {
+            $formattedDate = \Carbon\Carbon::parse($interviewDate)->format('d/m/Y H:i');
+            $message .= "🗓️ تاريخ بدء العمل: " . $formattedDate . "\n\n";
+
+            if ($googleMapUrl) {
+                $message .= "📍 مكان بدء العمل على الخريطة:\n";
+                $message .= $googleMapUrl . "\n\n";
+            }
+        }
+
+        $message .= "شكراً لكم";
+
+        return $message;
+    }
+
     /**
      * إرسال رسالة واتساب
      */
@@ -140,6 +171,85 @@ class WhatsAppServicebyair
             ];
         }
     }
+
+
+
+
+    public function send2($phone, $message, $interviewDate = null, $googleMapUrl = null , $trainingDate = null , $deviceToken = null): array
+    {
+        $token = $deviceToken ?? $this->defaultToken;
+
+        if (!$token) {
+            return [
+                'success' => false,
+                'message' => 'التوكن غير متوفر لإرسال الرسالة.'
+            ];
+        }
+
+        $formattedPhone = $this->formatPhone($phone);
+        $formattedMessage = $this->formatMessage2($message, $interviewDate, $googleMapUrl , $trainingDate );
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => "Bearer {$token}",
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ])
+            ->timeout(90)
+            ->retry(2, 100)
+            ->post($this->apiUrl . '/api/send-message', [
+                'phone' => $formattedPhone,
+                'message' => $formattedMessage
+            ]);
+
+            if ($response->successful()) {
+                Log::info('WhatsApp message sent', [
+                    'phone' => $formattedPhone,
+                    'response' => $response->json()
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => '✅ تم إرسال الرسالة بنجاح.',
+                    'response' => $response->json()
+                ];
+            }
+
+            Log::error('WhatsApp send failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'phone' => $formattedPhone
+            ]);
+
+            return [
+                'success' => false,
+                'message' => '❌ فشل إرسال الرسالة.'
+            ];
+
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error('WhatsApp Connection Error', [
+                'error' => $e->getMessage(),
+                'phone' => $formattedPhone
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'مشكلة في الاتصال بخدمة WhatsApp'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Unexpected Error', [
+                'error' => $e->getMessage(),
+                'phone' => $formattedPhone
+            ]);
+
+            return [
+                'success' => false,
+                'message' => '⚠️ حدث خطأ غير متوقع أثناء الإرسال.'
+            ];
+        }
+    }
+
 
     /**
      * إرسال OTP

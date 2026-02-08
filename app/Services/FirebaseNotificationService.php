@@ -17,10 +17,10 @@ class FirebaseNotificationService
     {
         $this->projectId = config('firebase.project_id');
         $this->fcmUrl = "https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send";
-        
+
         // Get access token for V1 API
         $this->accessToken = $this->getAccessToken();
-        
+
         Log::info('FirebaseNotificationService V1 initialized', [
             'project_id' => $this->projectId,
             'fcm_url' => $this->fcmUrl,
@@ -35,21 +35,21 @@ class FirebaseNotificationService
     private function getAccessToken()
     {
         $serviceAccountPath = config('firebase.service_account_path');
-        
+
         if (!$serviceAccountPath || !file_exists($serviceAccountPath)) {
             Log::error('Firebase service account file not found', [
                 'path' => $serviceAccountPath
             ]);
             return null;
         }
-        
+
         $serviceAccount = json_decode(file_get_contents($serviceAccountPath), true);
-        
+
         if (!$serviceAccount) {
             Log::error('Invalid service account file');
             return null;
         }
-        
+
         // Create JWT token
         $header = json_encode(['typ' => 'JWT', 'alg' => 'RS256']);
         $now = time();
@@ -60,31 +60,31 @@ class FirebaseNotificationService
             'iat' => $now,
             'exp' => $now + 3600
         ]);
-        
+
         $base64Header = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
         $base64Payload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
-        
+
         $signature = '';
         openssl_sign($base64Header . '.' . $base64Payload, $signature, $serviceAccount['private_key'], 'SHA256');
         $base64Signature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
-        
+
         $jwt = $base64Header . '.' . $base64Payload . '.' . $base64Signature;
-        
+
         // Exchange JWT for access token
         $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
             'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
             'assertion' => $jwt
         ]);
-        
+
         if ($response->successful()) {
             $data = $response->json();
             return $data['access_token'] ?? null;
         }
-        
+
         Log::error('Failed to get Firebase access token', [
             'response' => $response->body()
         ]);
-        
+
         return null;
     }
 
@@ -114,13 +114,13 @@ class FirebaseNotificationService
         // Send to all device tokens
         $success = true;
         $deviceTokens = is_array($user->device_tokens) ? $user->device_tokens : [];
-        
+
         Log::info('Sending notification to user', [
             'user_id' => $user->id,
             'device_tokens_count' => count($deviceTokens),
             'title' => $title
         ]);
-        
+
         foreach ($deviceTokens as $token) {
             if (!$this->sendToDevice($token, $title, $body, $data)) {
                 $success = false;
@@ -186,7 +186,7 @@ class FirebaseNotificationService
             foreach ($data as $key => $value) {
                 // Ensure key is a string
                 $stringKey = (string) $key;
-                
+
                 // Convert value to string, handling different data types
                 if (is_array($value) || is_object($value)) {
                     $stringData[$stringKey] = json_encode($value);
@@ -199,7 +199,7 @@ class FirebaseNotificationService
                 }
             }
         }
-        
+
         // If no data, add a default notification data
         if (empty($stringData)) {
             $stringData = [
@@ -207,7 +207,7 @@ class FirebaseNotificationService
                 'timestamp' => now()->toISOString()
             ];
         }
-        
+
         $payload = [
             'message' => [
                 'token' => $token,
@@ -260,14 +260,14 @@ class FirebaseNotificationService
                 'Authorization' => 'Bearer ' . $this->accessToken,
                 'Content-Type' => 'application/json',
             ];
-            
+
             Log::info('FCM V1 Notification - Making HTTP request', [
                 'url' => $this->fcmUrl,
                 'headers' => $headers,
                 'payload_size' => strlen(json_encode($payload)),
                 'method' => 'POST'
             ]);
-            
+
             $response = Http::withHeaders($headers)->post($this->fcmUrl, $payload);
 
             Log::info('FCM V1 Notification - HTTP Response', [
@@ -279,13 +279,13 @@ class FirebaseNotificationService
 
             if ($response->successful()) {
                 $responseData = $response->json();
-                
+
                 Log::info('FCM V1 Notification - Success', [
                     'token' => $token,
                     'response' => $responseData,
                     'message_name' => $responseData['name'] ?? 'unknown'
                 ]);
-                
+
                 return true;
             }
 
@@ -315,7 +315,7 @@ class FirebaseNotificationService
     public function addDeviceToken(User $user, string $token): bool
     {
         $tokens = $user->device_tokens ?? [];
-        
+
         if (!in_array($token, $tokens)) {
             $tokens[] = $token;
             $user->update(['device_tokens' => $tokens]);
@@ -331,7 +331,7 @@ class FirebaseNotificationService
     {
         $tokens = $user->device_tokens ?? [];
         $tokens = array_values(array_filter($tokens, fn($t) => $t !== $token));
-        
+
         $user->update(['device_tokens' => $tokens]);
         return true;
     }
@@ -343,7 +343,7 @@ class FirebaseNotificationService
     {
         $title = 'طلب إجازة جديد';
         $body = "تم تقديم طلب إجازة من {$user->name}";
-        
+
         return $this->sendToUser($user, $title, $body, [
             'type' => 'leave_request',
             'leave_id' => $leaveData['id'] ?? null,
@@ -359,7 +359,7 @@ class FirebaseNotificationService
     {
         $title = 'طلب سلفة جديد';
         $body = "تم تقديم طلب سلفة من {$user->name} بمبلغ {$advanceData['amount']} جنيه";
-        
+
         return $this->sendToUser($user, $title, $body, [
             'type' => 'advance_request',
             'advance_id' => $advanceData['id'] ?? null,
@@ -374,7 +374,7 @@ class FirebaseNotificationService
     {
         $title = 'إيداع تسليم جديد';
         $body = "تم تقديم إيداع تسليم من {$user->name} بمبلغ {$depositData['amount']} جنيه";
-        
+
         return $this->sendToUser($user, $title, $body, [
             'type' => 'delivery_deposit',
             'deposit_id' => $depositData['id'] ?? null,
@@ -389,7 +389,7 @@ class FirebaseNotificationService
     {
         $title = 'تمت الموافقة على طلب الإجازة';
         $body = "تمت الموافقة على طلب إجازتك من {$leaveData['start_date']} إلى {$leaveData['end_date']}";
-        
+
         return $this->sendToUser($user, $title, $body, [
             'type' => 'leave_request_approved',
             'leave_id' => $leaveData['id'] ?? null,
@@ -406,7 +406,7 @@ class FirebaseNotificationService
     {
         $title = 'تم رفض طلب الإجازة';
         $body = "تم رفض طلب إجازتك. السبب: {$reason}";
-        
+
         return $this->sendToUser($user, $title, $body, [
             'type' => 'leave_request_rejected',
             'leave_id' => $leaveData['id'] ?? null,
@@ -424,7 +424,7 @@ class FirebaseNotificationService
     {
         $title = 'تمت الموافقة على طلب السلفة';
         $body = "تمت الموافقة على طلب سلفتك بمبلغ {$advanceData['amount']} جنيه";
-        
+
         return $this->sendToUser($user, $title, $body, [
             'type' => 'advance_request_approved',
             'advance_id' => $advanceData['id'] ?? null,
@@ -440,7 +440,7 @@ class FirebaseNotificationService
     {
         $title = 'تم رفض طلب السلفة';
         $body = "تم رفض طلب سلفتك. السبب: {$reason}";
-        
+
         return $this->sendToUser($user, $title, $body, [
             'type' => 'advance_request_rejected',
             'advance_id' => $advanceData['id'] ?? null,
@@ -457,7 +457,7 @@ class FirebaseNotificationService
     {
         $title = 'تمت الموافقة على طلب الاستقالة';
         $body = "تمت الموافقة على طلب استقالتك. تاريخ الاستقالة: {$resignationData['resignation_date']}";
-        
+
         return $this->sendToUser($user, $title, $body, [
             'type' => 'resignation_request_approved',
             'resignation_id' => $resignationData['id'] ?? null,
@@ -473,7 +473,7 @@ class FirebaseNotificationService
     {
         $title = 'تم رفض طلب الاستقالة';
         $body = "تم رفض طلب استقالتك. السبب: {$reason}";
-        
+
         return $this->sendToUser($user, $title, $body, [
             'type' => 'resignation_request_rejected',
             'resignation_id' => $resignationData['id'] ?? null,

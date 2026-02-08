@@ -159,6 +159,8 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('banks', BankController::class);
     Route::get('bank-accounts/export', [\App\Http\Controllers\BankAccountController::class, 'export'])
         ->name('bank-accounts.export');
+    Route::post('bank-accounts/import', [\App\Http\Controllers\BankAccountController::class, 'import'])
+        ->name('bank-accounts.import');
     Route::resource('bank-accounts', \App\Http\Controllers\BankAccountController::class);
 
 

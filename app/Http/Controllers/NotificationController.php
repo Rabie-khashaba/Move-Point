@@ -14,14 +14,14 @@ class NotificationController extends Controller
     public function __construct(NotificationService $notificationService)
     {
         $this->notificationService = $notificationService;
-        
+
         // Ensure all notification methods are user-specific
         $this->middleware(function ($request, $next) {
             // Additional security: ensure user can only access their own notifications
             if ($request->route('id')) {
                 $notificationId = $request->route('id');
                 $notification = AppNotification::find($notificationId);
-                
+
                 if ($notification && $notification->user_id !== Auth::id()) {
                     return response()->json([
                         'success' => false,
@@ -29,7 +29,7 @@ class NotificationController extends Controller
                     ], 403);
                 }
             }
-            
+
             return $next($request);
         });
     }
@@ -40,7 +40,7 @@ class NotificationController extends Controller
     public function getUnreadCount()
     {
         $count = $this->notificationService->getUnreadCount();
-        
+
         return response()->json([
             'success' => true,
             'count' => $count
@@ -54,7 +54,7 @@ class NotificationController extends Controller
     {
         $limit = $request->get('limit', 10);
         $notifications = $this->notificationService->getRecentNotifications(null, $limit);
-        
+
         return response()->json([
             'success' => true,
             'notifications' => $notifications
@@ -67,7 +67,7 @@ class NotificationController extends Controller
     public function markAsRead(Request $request, $id)
     {
         $success = $this->notificationService->markAsRead($id);
-        
+
         return response()->json([
             'success' => $success,
             'message' => $success ? 'تم تحديد الإشعار كمقروء' : 'فشل في تحديث الإشعار'
@@ -80,7 +80,7 @@ class NotificationController extends Controller
     public function markAllAsRead()
     {
         $updated = $this->notificationService->markAllAsRead();
-        
+
         return response()->json([
             'success' => true,
             'message' => "تم تحديد {$updated} إشعار كمقروء",
@@ -94,12 +94,12 @@ class NotificationController extends Controller
     public function getStats()
     {
         $stats = $this->notificationService->getNotificationStats();
-        
+
         // Add today's count
         $stats['today'] = AppNotification::where('user_id', Auth::id())
             ->whereDate('created_at', today())
             ->count();
-        
+
         return response()->json([
             'success' => true,
             'statistics' => $stats
@@ -112,40 +112,40 @@ class NotificationController extends Controller
     public function index(Request $request)
     {
         $userId = Auth::id(); // Always use authenticated user's ID
-        
+
         // Additional security check: ensure user can only access their own notifications
         if ($request->has('user_id') && $request->user_id != $userId) {
             abort(403, 'غير مصرح بالوصول إلى إشعارات المستخدمين الآخرين');
         }
-        
+
         $perPage = $request->get('per_page', 20);
         $type = $request->get('type');
         $status = $request->get('status'); // 'read', 'unread', or null for all
-        
+
         $query = AppNotification::where('user_id', $userId);
-        
+
         // Filter by type
         if ($type) {
             $query->where('type', $type);
         }
-        
+
         // Filter by read status
         if ($status === 'read') {
             $query->where('is_read', true);
         } elseif ($status === 'unread') {
             $query->where('is_read', false);
         }
-        
+
         $notifications = $query->orderBy('created_at', 'desc')
             ->paginate($perPage);
-            
+
         $stats = $this->notificationService->getNotificationStats($userId);
-        
+
         // Add today's count
         $stats['today'] = AppNotification::where('user_id', $userId)
             ->whereDate('created_at', today())
             ->count();
-        
+
         return view('notifications.index', compact('notifications', 'stats', 'type', 'status'));
     }
 
@@ -158,10 +158,10 @@ class NotificationController extends Controller
         if (Auth::user()->type !== 'admin') {
             abort(403, 'غير مصرح بالوصول إلى هذه الصفحة');
         }
-        
+
         $users = \App\Models\User::get();
         $userTypes = ['admin', 'supervisor', 'representative', 'employee'];
-        
+
         return view('notifications.create', compact('users', 'userTypes'));
     }
 
@@ -174,14 +174,14 @@ class NotificationController extends Controller
         if (Auth::user()->type !== 'admin') {
             abort(403, 'غير مصرح بالوصول إلى هذه الصفحة');
         }
-        
+
         // Debug: Log all request data
         \Log::info('Notification request data', [
             'all_data' => $request->all(),
             'method' => $request->method(),
             'url' => $request->url()
         ]);
-        
+
         try {
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
@@ -212,7 +212,7 @@ class NotificationController extends Controller
                 'user_id' => Auth::id(),
                 'user_type' => Auth::user()->type
             ]);
-            
+
             // Prepare notification data
             $notificationData = [
                 'priority' => $validated['priority'] ?? 'normal',

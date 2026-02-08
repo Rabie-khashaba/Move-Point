@@ -8,12 +8,12 @@
     <div class="app-wrapper">
         <!-- Sidebar -->
         @include('partials.left-sidebar')
-        
+
         <!-- Main Content -->
         <div class="content-wrapper">
             <!-- Header -->
             @include('partials.header')
-            
+
             <!-- Page Content -->
             <main class="page-content p-4">
                 @if (session('success'))
@@ -30,23 +30,23 @@
                 @endif
                 @yield('content')
             </main>
-            
+
             <!-- Footer -->
             @include('partials.footer')
         </div>
     </div>
-    
+
     <!-- Mobile Overlay -->
     <div class="mobile-overlay" id="mobileOverlay"></div>
-    
+
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
     @include('partials.script')
-   
+
 
     @stack('scripts')
-    
+
     <!-- Custom JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -55,20 +55,20 @@
             }
 
             const sidebar = document.getElementById('sidebar');
-            
+
             // Load notification counts
             loadNotificationCounts();
-            
+
             // Refresh notification counts every 30 seconds
             setInterval(loadNotificationCounts, 30000);
-            
+
             // Load notification dropdown when opened
             loadNotificationDropdown();
-            
+
             // Setup notification dropdown event listeners
             setupNotificationDropdown();
         });
-        
+
         // Function to load notification counts
         function loadNotificationCounts() {
             fetch('/notifications/unread-count')
@@ -82,7 +82,7 @@
                     console.error('Error loading notification counts:', error);
                 });
         }
-        
+
         // Function to update notification badges
         function updateNotificationBadges(totalCount) {
             // Update individual request type counts
@@ -96,24 +96,24 @@
                             'resignation_request': 0,
                             'delivery_deposit': 0
                         };
-                        
+
                         // Count notifications by type
                         data.notifications.forEach(notification => {
                             if (counts.hasOwnProperty(notification.type)) {
                                 counts[notification.type]++;
                             }
                         });
-                        
+
                         // Update individual badges
                         updateBadge('leave-requests-count', counts.leave_request);
                         updateBadge('advance-requests-count', counts.advance_request);
                         updateBadge('resignation-requests-count', counts.resignation_request);
                         updateBadge('delivery-deposits-count', counts.delivery_deposit);
-                        
+
                         // Update total requests badge
                         const totalRequests = counts.leave_request + counts.advance_request + counts.resignation_request + counts.delivery_deposit;
                         updateBadge('requests-notification-count', totalRequests);
-                        
+
                         // Update all notifications badge
                         updateBadge('all-notifications-count', totalCount);
                         updateBadge('header-notification-count', totalCount);
@@ -123,7 +123,7 @@
                     console.error('Error loading recent notifications:', error);
                 });
         }
-        
+
         // Function to update individual badge
         function updateBadge(badgeId, count) {
             const badge = document.getElementById(badgeId);
@@ -136,14 +136,14 @@
                 }
             }
         }
-        
+
         // Function to setup notification dropdown event listeners
         function setupNotificationDropdown() {
             const notificationDropdown = document.querySelector('.nxl-header-notification');
             if (notificationDropdown) {
                 const dropdownToggle = notificationDropdown.querySelector('[data-bs-toggle="dropdown"]');
                 const dropdownMenu = notificationDropdown.querySelector('.dropdown-menu');
-                
+
                 if (dropdownToggle && dropdownMenu) {
                     dropdownToggle.addEventListener('click', function() {
                         // Load notifications when dropdown is opened
@@ -156,12 +156,12 @@
                 }
             }
         }
-        
+
         // Function to load notification dropdown content
         function loadNotificationDropdown() {
             const notificationList = document.getElementById('notification-dropdown-list');
             if (!notificationList) return;
-            
+
             fetch('/notifications/recent?limit=10')
                 .then(response => response.json())
                 .then(data => {
@@ -176,17 +176,17 @@
                     notificationList.innerHTML = '<div class="text-center p-3 text-muted">خطأ في تحميل الإشعارات</div>';
                 });
         }
-        
+
         // Function to display notifications in dropdown
         function displayNotificationDropdown(notifications) {
             const notificationList = document.getElementById('notification-dropdown-list');
             if (!notificationList) return;
-            
+
             if (notifications.length === 0) {
                 notificationList.innerHTML = '<div class="text-center p-3 text-muted">لا توجد إشعارات</div>';
                 return;
             }
-            
+
             notificationList.innerHTML = notifications.map(notification => `
                 <div class="notification-item ${notification.is_read ? '' : 'unread'}">
                     <div class="notification-content">
@@ -209,7 +209,7 @@
                 </div>
             `).join('');
         }
-        
+
         // Function to get notification icon based on type
         function getNotificationIcon(type) {
             const icons = {
@@ -221,13 +221,13 @@
             };
             return icons[type] || 'bell';
         }
-        
+
         // Function to format time ago
         function formatTimeAgo(dateString) {
             const date = new Date(dateString);
             const now = new Date();
             const diffInSeconds = Math.floor((now - date) / 1000);
-            
+
             if (diffInSeconds < 60) {
                 return 'الآن';
             } else if (diffInSeconds < 3600) {
@@ -241,7 +241,7 @@
                 return `منذ ${days} يوم`;
             }
         }
-        
+
         // Function to mark notification as read (from dropdown)
         function markAsRead(notificationId) {
             fetch(`/notifications/${notificationId}/mark-read`, {
@@ -264,7 +264,7 @@
                 console.error('Error marking notification as read:', error);
             });
         }
-        
+
         // Function to mark all notifications as read (from dropdown)
         function markAllAsRead() {
             fetch('/notifications/mark-all-read', {
@@ -288,7 +288,7 @@
             });
         }
     </script>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const sidebarToggle = document.getElementById('sidebarToggle');
@@ -367,13 +367,13 @@
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="إغلاق"></button>
             `;
-            
+
             // Insert at the top of the content wrapper
             const contentWrapper = document.querySelector('.content-wrapper');
             if (contentWrapper) {
                 contentWrapper.insertBefore(alertDiv, contentWrapper.firstChild);
             }
-            
+
             // Auto-hide after 5 seconds
             setTimeout(() => {
                 if (alertDiv.parentNode) {
@@ -399,9 +399,6 @@
         //     setTimeout(function() {
         //         const alerts = document.querySelectorAll('.alert');
         //         alerts.forEach(function(alert) {
-        //             if (alert.classList.contains('alert-persist')) {
-        //                 return;
-        //             }
         //             if (alert.parentNode) {
         //                 alert.remove();
         //             }
@@ -416,7 +413,7 @@
                 form.addEventListener('submit', function(e) {
                     const requiredFields = form.querySelectorAll('[required]');
                     let isValid = true;
-                    
+
                     requiredFields.forEach(function(field) {
                         if (!field.value.trim()) {
                             isValid = false;
@@ -425,7 +422,7 @@
                             field.classList.remove('is-invalid');
                         }
                     });
-                    
+
                     if (!isValid) {
                         e.preventDefault();
                         showAlert('الرجاء تعبئة جميع الحقول المطلوبة.', 'danger');
@@ -461,7 +458,7 @@
             });
         });
     </script>
-    
+
     @yield('scripts')
 </body>
 </html>

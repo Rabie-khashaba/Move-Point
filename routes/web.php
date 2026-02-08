@@ -580,6 +580,10 @@ Route::middleware(['auth'])->group(function () {
         ->name('training_sessions.toggle-status');
     Route::post('training_sessions/{id}/activeResign', [TrainingSessionController::class, 'activeResigne'])
         ->name('training_sessions.activeResigne');
+    Route::post('training_sessions/{id}/postpone', [TrainingSessionController::class, 'postpone'])
+        ->name('training_sessions.postpone');
+    Route::get('training_sessions/{id}/postpone-history', [TrainingSessionController::class, 'postponeHistory'])
+        ->name('training_sessions.postpone-history');
 
     Route::post('training_sessions/{id}/start-representative', [TrainingSessionController::class, 'startRealRepresentative'])
         ->name('training_sessions.startRealRepresentative');
@@ -613,6 +617,12 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('waiting-representatives/{id}/start-representative', [WaitingRepresentativeController::class, 'startRealRepresentative'])
         ->name('waiting-representatives.startRealRepresentative');
+    Route::post('waiting-representatives/{id}/resign', [WaitingRepresentativeController::class, 'resign'])
+        ->name('waiting-representatives.resign');
+    Route::post('waiting-representatives/{id}/followup', [WaitingRepresentativeController::class, 'followupStore'])
+        ->name('waiting-representatives.followup');
+    Route::get('waiting-representatives/{id}/followup-history', [WaitingRepresentativeController::class, 'followupHistory'])
+        ->name('waiting-representatives.followup-history');
 
     Route::post('waiting-representatives/{id}/change-location', [WaitingRepresentativeController::class, 'changeLocation'])
         ->name('waiting-representatives.changeLocation');

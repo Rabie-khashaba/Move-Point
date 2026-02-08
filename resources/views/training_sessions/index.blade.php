@@ -48,7 +48,7 @@
         <div id="collapseOne" class="accordion-collapse show  collapse page-header-collapse mb-4">
             <div class="accordion-body pb-2">
                 <div class="row">
-                    <div class="col-xxl-4 col-md-6 mb-3">
+                    <div class="col-xxl-3 col-md-6 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
@@ -66,7 +66,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-xxl-4 col-md-6 mb-3">
+                    <div class="col-xxl-3 col-md-6 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
@@ -84,7 +84,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-xxl-4 col-md-6 mb-3">
+                    <div class="col-xxl-3 col-md-6 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
@@ -102,7 +102,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-xxl-4 col-md-6 mb-3">
+
+                    <div class="col-xxl-3 col-md-6 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
@@ -111,7 +112,7 @@
                                             <i class="feather-user-x"></i>
                                         </div>
                                         <a href="javascript:void(0);" class="fw-bold d-block text-danger">
-                                            <span class="d-block">غير نشط</span>
+                                            <span class="d-block">مستقيليين</span>
                                             <span class="fs-24 fw-bolder d-block"
                                                 id="inactiveRepresentatives">{{ $inactiveRepresentatives }}</span>
                                         </a>
@@ -165,14 +166,39 @@
                                 <option value="">جميع الشركات</option>
                                 @foreach(\App\Models\Company::where('is_active', true)->get() as $company)
                                     <option value="{{ $company->id }}" {{ request('company_id') == $company->id ? 'selected' : ''
-                                                                                                                                                            }}>
+                                                                                                            }}>
                                         {{ $company->name }}
                                     </option>
                                 @endforeach
                             </select>
                         </div>
 
+                        <div class="col-md-2">
+                            <label class="form-label">المحافظة</label>
+                            <select name="governorate_id" id="governorate_id" class="form-control">
+                                <option value="">جميع المحافظات</option>
+                                @foreach(\App\Models\Governorate::all() as $governorate)
+                                    <option value="{{ $governorate->id }}"
+                                        {{ request('governorate_id') == $governorate->id ? 'selected' : '' }}>
+                                        {{ $governorate->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
+                        <div class="col-md-2">
+                            <label class="form-label">المنطقة</label>
+                            <select name="location_id" id="location_id" class="form-control">
+                                <option value="">جميع المناطق</option>
+                                @foreach(\App\Models\Location::all() as $location)
+                                    <option value="{{ $location->id }}"
+                                        data-governorate="{{ $location->governorate_id }}"
+                                        {{ request('location_id') == $location->id ? 'selected' : '' }}>
+                                        {{ $location->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
                         <div class="col-md-2 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary me-2">تصفية</button>
@@ -209,6 +235,7 @@
                                                 <th>النوع</th>
                                                 <th>الشركة</th>
                                                 <th>الأوراق الناقصه</th>
+                                                <th> سبب تأجيل</th>
                                                 <th>التاريخ</th>
                                                 <th>الإجراءات</th>
                                             </tr>
@@ -253,20 +280,22 @@
                                                     <td>
                                                         @if(count($session->representative->missingDocs()) > 0)
                                                             @foreach($session->representative->missingDocs() as $doc)
-                                                                <span>{{ $doc }}</span><br>
+                                                                    <span>{{ $doc }}</span><br>
                                                             @endforeach
                                                         @else
                                                             <span class="badge bg-success">كل الأوراق مكتملة</span>
                                                         @endif
                                                     </td>
                                                     <td>
+                                                        {{ $latestPostponeReasons[$session->id] ?? '-' }}
+                                                    </td>
+                                                    <td>
                                                         {{ $session->date }}
                                                     </td>
                                                     <td class="d-flex gap-2">
 
-                                                        <div class="btn-group">
-                                                            <button type="button" class="btn btn-sm btn-primary dropdown-toggle"
-                                                                data-bs-toggle="dropdown">
+                                                    <div class="btn-group">
+                                                            <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown">
                                                                 حالة التدريب
                                                             </button>
 
@@ -286,8 +315,8 @@
                                                                 <!-- لم يحضر -->
                                                                 <li>
                                                                     <button type="button"
-                                                                        class="dropdown-item text-danger openAbsentModal"
-                                                                        data-id="{{ $session->representative_id }}">
+                                                                            class="dropdown-item text-danger openAbsentModal"
+                                                                            data-id="{{ $session->representative_id }}">
                                                                         لم يحضر
                                                                     </button>
                                                                 </li>
@@ -295,29 +324,12 @@
                                                             </ul>
                                                         </div>
 
-                                                        @if($session->representative->is_active)
-                                                            <button type="button"
-                                                                class="btn btn-sm btn-outline-{{ $session->representative->is_active ? 'danger' : 'success' }} uniform-btn"
-                                                                data-bs-toggle="modal" data-bs-target="#reasonModal{{ $session->id }}">
-                                                                <!--                                                             {{ $session->representative->is_active ? 'استقاله' : 'تفعيل' }}-->
-                                                                استقاله
-                                                            </button>
-                                                        @endif
-
-                                                       {{-- @if(!$session->representative->is_active)
-                                                            <form
-                                                                action="{{ route('training_sessions.activeResigne', $session->representative->id) }}"
-                                                                method="POST"
-                                                                onsubmit="return confirm('هل أنت متأكد من تفعيل هذا المندوب؟');">
-                                                                @csrf
-                                                                <button type="submit"
-                                                                    class="btn btn-outline-success d-flex align-items-center"
-                                                                    title="تفعيل">
-                                                                    <i class="feather-play me-2"></i>
-                                                                    <span>تفعيل</span>
-                                                                </button>
-                                                            </form>
-                                                        @endif --}}
+                                                        <button type="button"
+                                                            class="btn btn-sm btn-outline-danger uniform-btn {{ !$session->representative->is_active ? 'disabled' : '' }}"
+                                                            data-bs-toggle="modal" data-bs-target="#reasonModal{{ $session->id }}">
+                                                            <!--{{ $session->representative->is_active ? 'استقاله' : 'تفعيل' }}-->
+                                                            استقاله
+                                                        </button>
 
 
                                                         <button type="button" class="btn btn-sm btn-info uniform-btn"
@@ -330,30 +342,22 @@
 
 
                                                         @if($session->representative->is_training)
-                                                            <button type="button" class="btn btn-sm btn-warning" title="رسالة بدء العمل"
-                                                                data-bs-toggle="modal" data-bs-target="#interviewModal"
-                                                                data-id="{{ $session->representative_id}}">
-                                                                <i class="feather-clock"></i>
-                                                            </button>
+                                                        <button type="button" class="btn btn-sm btn-warning" title="رسالة بدء العمل"
+                                                            data-bs-toggle="modal" data-bs-target="#interviewModal"
+                                                            data-id="{{ $session->representative_id}}">
+                                                            <i class="feather-clock"></i>
+                                                        </button>
 
 
-                                                            {{-- <button type="button" class="btn btn-sm btn-success"
-                                                                title="لا يوجد مكان عمل في المنطقة" data-bs-toggle="modal"
-                                                                data-bs-target="#zoneModal" data-id="{{ $session->representative_id }}">
-                                                                <i class="feather-map-pin"></i>
-                                                            </button>--}}
-
-
-                                                            <form
-                                                                action="{{ route('training_sessions.noLocation', $session->representative->id) }}"
-                                                                method="POST">
-                                                                @csrf
-                                                                <button type="submit"
-                                                                    class="btn btn-outline-success d-flex align-items-center"
-                                                                    title="لا يوجد مكان عمل في المنطقة">
-                                                                    <i class="feather-map-pin"></i>
-                                                                </button>
-                                                            </form>
+                                                        <button type="button"
+                                                            class="btn btn-outline-success d-flex align-items-center openPostponeModal"
+                                                            title="تأجيل"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#postponeModal"
+                                                            data-session-id="{{ $session->id }}">
+                                                            <i class="feather-clock"></i>
+                                                            <span class="ms-1">تأجيل</span>
+                                                        </button>
 
                                                         @endif
 
@@ -416,9 +420,9 @@
                                     </div>
                                     <h5>لا توجد نتائج</h5>
                                     <!-- <p class="text-muted">ابدأ بإضافة أول مندوب.</p>
-                                                                                    <a href="{{ route('representatives-not-completed.create') }}" class="btn btn-primary">
-                                                                                        <i class="feather-plus me-2"></i>إضافة مندوب
-                                                                                    </a> -->
+                                    <a href="{{ route('representatives-not-completed.create') }}" class="btn btn-primary">
+                                        <i class="feather-plus me-2"></i>إضافة مندوب
+                                    </a> -->
                                 </div>
                             @endif
                         </div>
@@ -468,7 +472,6 @@
                                 </select>
                                 <small class="text-muted">يمكن اختيار المحافظة فقط أو المحافظة والمنطقة معاً</small>
                             </div>
-
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">الشركه</label>
@@ -536,6 +539,7 @@
                                 </select>
                                 <small class="text-muted">يمكن اختيار المحافظة فقط أو المحافظة والمنطقة معاً</small>
                             </div>
+
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">الشركه</label>
                                 <select name="company_id" id="company_id" class="form-control" required>
@@ -590,7 +594,7 @@
 
                     <div class="modal-body">
                         <textarea name="note" class="form-control" rows="4" placeholder="اكتب السبب..." required></textarea>
-                        <!-- إضافة الـ Select الجديد -->
+                         <!-- إضافة الـ Select الجديد -->
                         <label class="mt-3 fw-bold">الحالة</label>
                         <select name="status" class="form-select" required>
                             <option value="">اختر الحالة</option>
@@ -605,6 +609,45 @@
                     </div>
                 </div>
 
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="postponeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="POST" id="postponeForm">
+                @csrf
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">تأجيل الجلسة التدريبية</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="postponeHistory" class="mb-3 d-none">
+                            <label class="fw-bold">التأجيلات السابقة</label>
+                            <div class="border rounded p-2 bg-light" id="postponeHistoryList"></div>
+                        </div>
+
+                        <label class="fw-bold">الحالة</label>
+                        <select name="reason" class="form-select" required>
+                            <option value="">اختر السبب</option>
+                            <option value="مرضي">مرضي</option>
+                            <option value="الـ zone مقفول">الـ zone مقفول</option>
+                            <option value="اخرى">اخرى</option>
+                        </select>
+
+                        <label class="mt-3 fw-bold">تاريخ المتابعة</label>
+                        <input type="date" name="follow_up_date" class="form-control">
+
+                        <label class="mt-3 fw-bold">ملاحظات</label>
+                        <textarea name="note" class="form-control" rows="4" required
+                            placeholder="اكتب التفاصيل هنا..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-success">تأكيد التأجيل</button>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
@@ -627,6 +670,37 @@
         });
 
         $(document).ready(function () {
+            const allLocationOptions = $('#location_id').html();
+
+            $('#governorate_id').on('change', function () {
+                const governorateId = $(this).val();
+                const locationSelect = $('#location_id');
+
+                locationSelect.html(allLocationOptions);
+
+                if (governorateId) {
+                    locationSelect.find('option').each(function () {
+                        const option = $(this);
+                        const optionGovernorate = option.data('governorate');
+                        if (option.val() !== '' && optionGovernorate != governorateId) {
+                            option.remove();
+                        }
+                    });
+                }
+
+                locationSelect.val('').trigger('change');
+            });
+
+            const initialGovernorateId = "{{ request('governorate_id') }}";
+            const initialLocationId = "{{ request('location_id') }}";
+            if (initialGovernorateId) {
+                $('#governorate_id').trigger('change');
+                if (initialLocationId) {
+                    setTimeout(function () {
+                        $('#location_id').val(initialLocationId).trigger('change');
+                    }, 100);
+                }
+            }
             // Handle modal data
             $('#transferModal').on('show.bs.modal', function (event) {
                 var button = $(event.relatedTarget);
@@ -813,157 +887,9 @@
             });
         });
 
-        // Handle status change in follow-up modal
-        /* document.addEventListener('DOMContentLoaded', function () {
-
-            const interviewModal = document.getElementById('interviewModal');
-
-            interviewModal.addEventListener('show.bs.modal', function (event) {
-                const button = event.relatedTarget; // الزرار اللي فتح المودال
-                const repId = button.getAttribute('data-id');
-
-                // حط id جوه الفورم
-                const hiddenInput = interviewModal.querySelector('input[name="representative_id"]');
-                hiddenInput.value = repId;
-
-                // حدّث الفورم عشان يبعت للـ route الصح
-                const form = interviewModal.querySelector('form');
-                form.action = "{{ route('training_sessions.startRealRepresentative', ':id') }}"
-                    .replace(':id', repId);
-            });
-            // Interview modal functionality
-            const interviewGovSelect = document.getElementById('interview_government_id');
-            const interviewLocSelect = document.getElementById('interview_location_id');
-            const interviewMessageSelect = document.getElementById('interview_message_id');
-            const messagePreview = document.getElementById('messagePreview');
-
-            // Load locations when governorate changes
-            if (interviewGovSelect && interviewLocSelect) {
-                interviewGovSelect.addEventListener('change', function () {
-                    const governorateId = this.value;
-
-                    if (!governorateId) {
-                        interviewLocSelect.innerHTML = '<option value="">اختر المنطقة</option>';
-                        // Clear messages when governorate is cleared
-                        if (interviewMessageSelect) {
-                            interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                            messagePreview.innerHTML = '<small class="text-muted">اختر المحافظة لعرض الرسائل المتاحة</small>';
-                        }
-                        return;
-                    }
-
-                    fetch(`{{ url('getlocations') }}/${governorateId}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            interviewLocSelect.innerHTML = '<option value="">اختر المنطقة</option>';
-                            data.forEach(loc => {
-                                interviewLocSelect.innerHTML += `<option value="${loc.id}">${loc.name}</option>`;
-                            });
-
-                            // Load messages for government only (without location)
-                            loadMessagesForGovernment(governorateId);
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            interviewLocSelect.innerHTML = '<option value="">خطأ في تحميل البيانات</option>';
-                        });
-                });
-            }
-
-            // Load messages when location changes
-            if (interviewLocSelect && interviewMessageSelect) {
-                interviewLocSelect.addEventListener('change', function () {
-                    const locationId = this.value;
-                    const governorateId = interviewGovSelect.value;
-
-                    if (!governorateId) {
-                        interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                        messagePreview.innerHTML = '<small class="text-muted">اختر المحافظة أولاً</small>';
-                        return;
-                    }
-
-                    if (!locationId) {
-                        // If location is cleared, load messages for government only
-                        loadMessagesForGovernment(governorateId);
-                        return;
-                    }
-
-                    // Load messages for specific government and location
-                    loadMessagesForGovernmentAndLocation(governorateId, locationId);
-                });
-            }
-
-            // Function to load messages for government only
-            function loadMessagesForGovernment(governorateId) {
-                if (!interviewMessageSelect) return;
-
-                fetch(`{{ url('getmessagesStartWork') }}?government_id=${governorateId}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                        data.forEach(msg => {
-                            interviewMessageSelect.innerHTML += `<option value="${msg.id}">${msg.description}</option>`;
-                        });
-                        messagePreview.innerHTML = '<small class="text-muted">اختر الرسالة لعرض المعاينة</small>';
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        interviewMessageSelect.innerHTML = '<option value="">خطأ في تحميل الرسائل</option>';
-                        messagePreview.innerHTML = '<small class="text-danger">خطأ في تحميل الرسائل</small>';
-                    });
-            }
-
-            // Function to load messages for specific government and location
-            function loadMessagesForGovernmentAndLocation(governorateId, locationId) {
-                if (!interviewMessageSelect) return;
-
-                fetch(`{{ url('getmessagesStartWork') }}?government_id=${governorateId}&location_id=${locationId}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                        data.forEach(msg => {
-                            interviewMessageSelect.innerHTML += `<option value="${msg.id}">${msg.description}</option>`;
-                        });
-                        messagePreview.innerHTML = '<small class="text-muted">اختر الرسالة لعرض المعاينة</small>';
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        interviewMessageSelect.innerHTML = '<option value="">خطأ في تحميل الرسائل</option>';
-                        messagePreview.innerHTML = '<small class="text-danger">خطأ في تحميل الرسائل</small>';
-                    });
-            }
-
-            // Show message preview when message is selected
-            if (interviewMessageSelect && messagePreview) {
-                interviewMessageSelect.addEventListener('change', function () {
-                    const messageId = this.value;
-
-                    if (!messageId) {
-                        messagePreview.innerHTML = '<small class="text-muted">اختر الرسالة لعرض المعاينة</small>';
-                        return;
-                    }
-
-                    fetch(`{{ url('getmessageStartWork') }}/${messageId}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            messagePreview.innerHTML = `
-                                                     <div class="mb-2"><strong>الوصف:</strong> ${data.description}</div>
-                                                     ${data.google_map_url ? `<div><strong>رابط الخريطة:</strong> <a href="${data.google_map_url}" target="_blank">${data.google_map_url}</a></div>` : ''}
-                                                 `;
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            messagePreview.innerHTML = '<small class="text-danger">خطأ في تحميل الرسالة</small>';
-                        });
-                });
-            }
 
 
-        }); */
-
-
-
-document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function () {
 
         var interviewModal = document.getElementById('interviewModal');
         var interviewForm  = document.getElementById('interviewForm');
@@ -975,7 +901,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             document.querySelector('input[name="representative_id"]').value = id;
 
-            interviewForm.action = "{{ route('representatives-not-completed.startRealRepresentative', ':id') }}"
+            interviewForm.action = "{{ route('training_sessions.startRealRepresentative', ':id') }}"
                 .replace(':id', id);
         });
 
@@ -1101,9 +1027,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         });
-
-
-
 
         document.addEventListener('DOMContentLoaded', function () {
 
@@ -1239,9 +1162,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         .then(res => res.json())
                         .then(data => {
                             messagePreview.innerHTML = `
-                                                     <div class="mb-2"><strong>الوصف:</strong> ${data.description}</div>
-                                                     ${data.google_map_url ? `<div><strong>رابط الخريطة:</strong> <a href="${data.google_map_url}" target="_blank">${data.google_map_url}</a></div>` : ''}
-                                                 `;
+                             <div class="mb-2"><strong>الوصف:</strong> ${data.description}</div>
+                             ${data.google_map_url ? `<div><strong>رابط الخريطة:</strong> <a href="${data.google_map_url}" target="_blank">${data.google_map_url}</a></div>` : ''}
+                         `;
                         })
                         .catch(err => {
                             console.error(err);
@@ -1253,15 +1176,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
         });
 
-       /*  document.addEventListener('DOMContentLoaded', function () {
+
+
+        document.addEventListener('DOMContentLoaded', function () {
             var trainingModal = document.getElementById('SendMessageTrainingModal');
-            var trainingForm = document.getElementById('trainingForm');
+            var trainingForm  = document.getElementById('trainingForm');
             var trainingRepId = document.getElementById('trainingRepId');
 
             // تحديث البيانات عند فتح المودال
             trainingModal.addEventListener('show.bs.modal', function (event) {
                 var button = event.relatedTarget;
-                var id = button.getAttribute('data-id');
+                var id   = button.getAttribute('data-id');
                 var name = button.getAttribute('data-name');
 
                 // hidden input
@@ -1276,14 +1201,17 @@ document.addEventListener('DOMContentLoaded', function () {
             const interviewMessageSelect = document.getElementById('messageT_id');
             const messagePreview = document.getElementById('messagePreviewT');
             const trainingTypeSelect = document.getElementById('trainingType');
+            const companySelect = document.getElementById('companyT_id');
 
             // Function to load messages
-            function loadMessages(governorateId, locationId = null, type = null) {
+            function loadMessages(governorateId, locationId = null, type = null , companyId = null) {
                 if (!interviewMessageSelect) return;
 
                 let url = `{{ url('getmessagesTraining') }}?government_id=${governorateId}`;
                 if (locationId) url += `&location_id=${locationId}`;
                 if (type) url += `&type=${type}`;
+                if (companyId) url += `&company_id=${companyId}`;
+
 
                 fetch(url)
                     .then(res => res.json())
@@ -1304,15 +1232,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // عند تغيير المحافظة
             if (interviewGovSelect) {
-                interviewGovSelect.addEventListener('change', function () {
+                interviewGovSelect.addEventListener('change', function() {
                     const governorateId = this.value;
+
                     if (!governorateId) {
                         interviewLocSelect.innerHTML = '<option value="">اختر المنطقة</option>';
                         interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                        messagePreview.innerHTML = '<small class="text-muted">اختر المحافظة لعرض الرسائل المتاحة</small>';
+                        messagePreview.innerHTML = '<small class="text-muted">اختر المحافظة والمنطقة والشركة لعرض الرسائل المتاحة</small>';
                         return;
                     }
 
+                    // تحميل المناطق فقط
                     fetch(`{{ url('getlocations') }}/${governorateId}`)
                         .then(res => res.json())
                         .then(data => {
@@ -1321,8 +1251,9 @@ document.addEventListener('DOMContentLoaded', function () {
                                 interviewLocSelect.innerHTML += `<option value="${loc.id}">${loc.name}</option>`;
                             });
 
-                            const type = trainingTypeSelect.value;
-                            loadMessages(governorateId, null, type);
+                            // مسح الرسائل وإضافة رسالة توضيحية
+                            interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
+                            messagePreview.innerHTML = '<small class="text-muted">يجب اختيار المنطقة والشركة لعرض الرسائل</small>';
                         })
                         .catch(err => {
                             console.error(err);
@@ -1333,33 +1264,67 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // عند تغيير المنطقة
             if (interviewLocSelect) {
-                interviewLocSelect.addEventListener('change', function () {
+                interviewLocSelect.addEventListener('change', function() {
                     const locationId = this.value;
                     const governorateId = interviewGovSelect.value;
+                    const companyId = companySelect.value;
                     const type = trainingTypeSelect.value;
 
-                    if (!governorateId) return;
-
-                    loadMessages(governorateId, locationId || null, type);
+                    // التحقق من اختيار الثلاثة معًا
+                    if (governorateId && locationId && companyId) {
+                        loadMessages(governorateId, locationId, type, companyId);
+                    } else if (!locationId) {
+                        interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
+                        messagePreview.innerHTML = '<small class="text-muted">يجب اختيار المنطقة والشركة لعرض الرسائل</small>';
+                    } else if (!companyId) {
+                        interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
+                        messagePreview.innerHTML = '<small class="text-muted">يجب اختيار الشركة لعرض الرسائل</small>';
+                    }
                 });
             }
 
             // عند تغيير النوع
             if (trainingTypeSelect) {
-                trainingTypeSelect.addEventListener('change', function () {
+                trainingTypeSelect.addEventListener('change', function() {
                     const governorateId = interviewGovSelect.value;
                     const locationId = interviewLocSelect.value;
+                    const companyId = companySelect.value;
                     const type = this.value;
 
-                    if (governorateId) {
-                        loadMessages(governorateId, locationId || null, type);
+                    // التحقق من اختيار الثلاثة معًا
+                    if (governorateId && locationId && companyId) {
+                        loadMessages(governorateId, locationId, type, companyId);
+                    } else {
+                        interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
+                        messagePreview.innerHTML = '<small class="text-muted">يجب اختيار المحافظة والمنطقة والشركة لعرض الرسائل</small>';
+                    }
+                });
+            }
+
+            // عند تغيير الشركة
+            if (companySelect) {
+                companySelect.addEventListener('change', function() {
+                    const governorateId = interviewGovSelect.value;
+                    const locationId = interviewLocSelect.value;
+                    const type = trainingTypeSelect.value;
+                    const companyId = this.value;
+
+                    // التحقق من اختيار الثلاثة معًا
+                    if (governorateId && locationId && companyId) {
+                        loadMessages(governorateId, locationId, type, companyId);
+                    } else if (!companyId) {
+                        interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
+                        messagePreview.innerHTML = '<small class="text-muted">يجب اختيار الشركة لعرض الرسائل</small>';
+                    } else if (!governorateId || !locationId) {
+                        interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
+                        messagePreview.innerHTML = '<small class="text-muted">يجب اختيار المحافظة والمنطقة والشركة لعرض الرسائل</small>';
                     }
                 });
             }
 
             // عرض المعاينة عند اختيار الرسالة
             if (interviewMessageSelect) {
-                interviewMessageSelect.addEventListener('change', function () {
+                interviewMessageSelect.addEventListener('change', function() {
                     const messageId = this.value;
                     if (!messageId) {
                         messagePreview.innerHTML = '<small class="text-muted">اختر الرسالة لعرض المعاينة</small>';
@@ -1371,14 +1336,14 @@ document.addEventListener('DOMContentLoaded', function () {
                         .then(data => {
                             if (data.type === "أونلاين") {
                                 messagePreview.innerHTML = `
-                                                        <div class="mb-2"><strong>الوصف:</strong> ${data.description_training}</div>
-                                                        ${data.link_training ? `<div><strong>الرابط:</strong> <a href="${data.link_training}" target="_blank">${data.link_training}</a></div>` : ''}
-                                                        `;
+                                    <div class="mb-2"><strong>الوصف:</strong> ${data.description_training}</div>
+                                    ${data.link_training ? `<div><strong>الرابط:</strong> <a href="${data.link_training}" target="_blank">${data.link_training}</a></div>` : ''}
+                                `;
                             } else {
                                 messagePreview.innerHTML = `
-                                                        <div class="mb-2"><strong>الوصف:</strong> ${data.description_location}</div>
-                                                        ${data.google_map_url ? `<div><strong>رابط الخريطة:</strong> <a href="${data.google_map_url}" target="_blank">${data.google_map_url}</a></div>` : ''}
-                                                    `;
+                                    <div class="mb-2"><strong>الوصف:</strong> ${data.description_location}</div>
+                                    ${data.google_map_url ? `<div><strong>رابط الخريطة:</strong> <a href="${data.google_map_url}" target="_blank">${data.google_map_url}</a></div>` : ''}
+                                `;
                             }
                         })
                         .catch(err => {
@@ -1387,186 +1352,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         });
                 });
             }
-        }); */
-
-
-
-    document.addEventListener('DOMContentLoaded', function () {
-    var trainingModal = document.getElementById('SendMessageTrainingModal');
-    var trainingForm  = document.getElementById('trainingForm');
-    var trainingRepId = document.getElementById('trainingRepId');
-
-    // تحديث البيانات عند فتح المودال
-    trainingModal.addEventListener('show.bs.modal', function (event) {
-        var button = event.relatedTarget;
-        var id   = button.getAttribute('data-id');
-        var name = button.getAttribute('data-name');
-
-        // hidden input
-        trainingRepId.value = id;
-
-        // تعديل الفورم action
-        trainingForm.action = "{{ route('representatives-not-completed.send_message_training', ':id') }}".replace(':id', id);
-    });
-
-    const interviewGovSelect = document.getElementById('governmentT_id');
-    const interviewLocSelect = document.getElementById('locationT_id');
-    const interviewMessageSelect = document.getElementById('messageT_id');
-    const messagePreview = document.getElementById('messagePreviewT');
-    const trainingTypeSelect = document.getElementById('trainingType');
-    const companySelect = document.getElementById('companyT_id');
-
-    // Function to load messages
-    function loadMessages(governorateId, locationId = null, type = null , companyId = null) {
-        if (!interviewMessageSelect) return;
-
-        let url = `{{ url('getmessagesTraining') }}?government_id=${governorateId}`;
-        if (locationId) url += `&location_id=${locationId}`;
-        if (type) url += `&type=${type}`;
-        if (companyId) url += `&company_id=${companyId}`;
-
-
-        fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                data.forEach(msg => {
-                    let optionText = msg.type === "online" ? msg.description_training : msg.description_location;
-                    interviewMessageSelect.innerHTML += `<option value="${msg.id}" data-type="${msg.type}">${optionText}</option>`;
-                });
-                messagePreview.innerHTML = '<small class="text-muted">اختر الرسالة لعرض المعاينة</small>';
-            })
-            .catch(err => {
-                console.error(err);
-                interviewMessageSelect.innerHTML = '<option value="">خطأ في تحميل الرسائل</option>';
-                messagePreview.innerHTML = '<small class="text-danger">خطأ في تحميل الرسائل</small>';
-            });
-    }
-
-    // عند تغيير المحافظة
-    if (interviewGovSelect) {
-        interviewGovSelect.addEventListener('change', function() {
-            const governorateId = this.value;
-
-            if (!governorateId) {
-                interviewLocSelect.innerHTML = '<option value="">اختر المنطقة</option>';
-                interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                messagePreview.innerHTML = '<small class="text-muted">اختر المحافظة والمنطقة والشركة لعرض الرسائل المتاحة</small>';
-                return;
-            }
-
-            // تحميل المناطق فقط
-            fetch(`{{ url('getlocations') }}/${governorateId}`)
-                .then(res => res.json())
-                .then(data => {
-                    interviewLocSelect.innerHTML = '<option value="">اختر المنطقة</option>';
-                    data.forEach(loc => {
-                        interviewLocSelect.innerHTML += `<option value="${loc.id}">${loc.name}</option>`;
-                    });
-
-                    // مسح الرسائل وإضافة رسالة توضيحية
-                    interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                    messagePreview.innerHTML = '<small class="text-muted">يجب اختيار المنطقة والشركة لعرض الرسائل</small>';
-                })
-                .catch(err => {
-                    console.error(err);
-                    interviewLocSelect.innerHTML = '<option value="">خطأ في تحميل البيانات</option>';
-                });
         });
-    }
-
-    // عند تغيير المنطقة
-    if (interviewLocSelect) {
-        interviewLocSelect.addEventListener('change', function() {
-            const locationId = this.value;
-            const governorateId = interviewGovSelect.value;
-            const companyId = companySelect.value;
-            const type = trainingTypeSelect.value;
-
-            // التحقق من اختيار الثلاثة معًا
-            if (governorateId && locationId && companyId) {
-                loadMessages(governorateId, locationId, type, companyId);
-            } else if (!locationId) {
-                interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                messagePreview.innerHTML = '<small class="text-muted">يجب اختيار المنطقة والشركة لعرض الرسائل</small>';
-            } else if (!companyId) {
-                interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                messagePreview.innerHTML = '<small class="text-muted">يجب اختيار الشركة لعرض الرسائل</small>';
-            }
-        });
-    }
-
-    // عند تغيير النوع
-    if (trainingTypeSelect) {
-        trainingTypeSelect.addEventListener('change', function() {
-            const governorateId = interviewGovSelect.value;
-            const locationId = interviewLocSelect.value;
-            const companyId = companySelect.value;
-            const type = this.value;
-
-            // التحقق من اختيار الثلاثة معًا
-            if (governorateId && locationId && companyId) {
-                loadMessages(governorateId, locationId, type, companyId);
-            } else {
-                interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                messagePreview.innerHTML = '<small class="text-muted">يجب اختيار المحافظة والمنطقة والشركة لعرض الرسائل</small>';
-            }
-        });
-    }
-
-    // عند تغيير الشركة
-    if (companySelect) {
-        companySelect.addEventListener('change', function() {
-            const governorateId = interviewGovSelect.value;
-            const locationId = interviewLocSelect.value;
-            const type = trainingTypeSelect.value;
-            const companyId = this.value;
-
-            // التحقق من اختيار الثلاثة معًا
-            if (governorateId && locationId && companyId) {
-                loadMessages(governorateId, locationId, type, companyId);
-            } else if (!companyId) {
-                interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                messagePreview.innerHTML = '<small class="text-muted">يجب اختيار الشركة لعرض الرسائل</small>';
-            } else if (!governorateId || !locationId) {
-                interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                messagePreview.innerHTML = '<small class="text-muted">يجب اختيار المحافظة والمنطقة والشركة لعرض الرسائل</small>';
-            }
-        });
-    }
-
-    // عرض المعاينة عند اختيار الرسالة
-    if (interviewMessageSelect) {
-        interviewMessageSelect.addEventListener('change', function() {
-            const messageId = this.value;
-            if (!messageId) {
-                messagePreview.innerHTML = '<small class="text-muted">اختر الرسالة لعرض المعاينة</small>';
-                return;
-            }
-
-            fetch(`{{ url('getmessageTraining') }}/${messageId}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.type === "أونلاين") {
-                        messagePreview.innerHTML = `
-                            <div class="mb-2"><strong>الوصف:</strong> ${data.description_training}</div>
-                            ${data.link_training ? `<div><strong>الرابط:</strong> <a href="${data.link_training}" target="_blank">${data.link_training}</a></div>` : ''}
-                        `;
-                    } else {
-                        messagePreview.innerHTML = `
-                            <div class="mb-2"><strong>الوصف:</strong> ${data.description_location}</div>
-                            ${data.google_map_url ? `<div><strong>رابط الخريطة:</strong> <a href="${data.google_map_url}" target="_blank">${data.google_map_url}</a></div>` : ''}
-                        `;
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    messagePreview.innerHTML = '<small class="text-danger">خطأ في تحميل الرسالة</small>';
-                });
-        });
-    }
-});
-
 
         document.addEventListener('DOMContentLoaded', function () {
             var sendNotesModal = document.getElementById('SendNotesModal');
@@ -1595,9 +1381,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         var noteDiv = document.createElement('div');
                         noteDiv.classList.add('mb-2', 'p-2', 'border', 'rounded', 'bg-white');
                         noteDiv.innerHTML = `
-                                                            <div>${note.note}</div>
-                                                            <small class="text-muted">${note.user} - ${note.created_at}</small>
-                                                        `;
+                                                                                                                                            <div>${note.note}</div>
+                                                                                                                                            <small class="text-muted">${note.user} - ${note.created_at}</small>
+                                                                                                                                        `;
                         previousNotesDiv.appendChild(noteDiv);
                     });
                 } else {
@@ -1605,11 +1391,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         });
-
-
-
-
-   </script>
+    </script>
 
 
 
@@ -1622,10 +1404,54 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 form.action =
                     "{{ route('representatives-not-completed.toggleTraining', ':id') }}"
-                        .replace(':id', id);
+                    .replace(':id', id);
 
                 const myModal = new bootstrap.Modal(document.getElementById('absentModal'));
                 myModal.show();
+            });
+        });
+    </script>
+
+    <script>
+        document.querySelectorAll('.openPostponeModal').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const id = this.dataset.sessionId;
+                const form = document.getElementById('postponeForm');
+                form.action = "{{ route('training_sessions.postpone', ':id') }}".replace(':id', id);
+
+                const historyWrapper = document.getElementById('postponeHistory');
+                const historyList = document.getElementById('postponeHistoryList');
+                historyWrapper.classList.add('d-none');
+                historyList.innerHTML = '';
+
+                fetch("{{ route('training_sessions.postpone-history', ':id') }}".replace(':id', id))
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.success || !data.items || data.items.length === 0) {
+                            return;
+                        }
+
+                        historyWrapper.classList.remove('d-none');
+                        historyList.innerHTML = data.items.map(item => {
+                            const date = item.follow_up_date ? new Date(item.follow_up_date).toLocaleDateString('ar-EG') : '-';
+                            const reason = item.reason || '';
+                            const note = item.note || '';
+                            const createdAt = item.created_at ? new Date(item.created_at).toLocaleDateString('ar-EG') : '';
+                            const createdBy = item.created_by_name || '';
+                            return `
+                                <div class="mb-2 p-2 border rounded bg-white">
+                                    <div><strong>الحالة:</strong> ${reason}</div>
+                                    <div><strong>تاريخ المتابعة:</strong> ${date}</div>
+                                    <div><strong>الملاحظات:</strong> ${note}</div>
+                                    <div><strong>أضيف بواسطة:</strong> ${createdBy || '-'}</div>
+                                    <div class="text-muted small">${createdAt}</div>
+                                </div>
+                            `;
+                        }).join('');
+                    })
+                    .catch(() => {
+                        // ignore history errors
+                    });
             });
         });
     </script>

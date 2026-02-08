@@ -8,7 +8,7 @@
         <div class="page-header">
             <div class="page-header-left d-flex align-items-center">
                 <div class="page-header-title">
-                    <h5 class="m-b-10">المندوبين المنت ظرين</h5>
+                    <h5 class="m-b-10">المندوبين المنتظرين</h5>
                 </div>
                 <ul class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">الرئيسية</a></li>
@@ -89,7 +89,7 @@
                                             <i class="feather-user-plus"></i>
                                         </div>
                                         <a href="javascript:void(0);" class="fw-bold d-block text-black">
-                                            <span class="d-block">شركه بوسته</span>
+                                            <span class="d-block">شركه بوسطه</span>
                                             <span class="fs-24 fw-bolder d-block"
                                                 id="qualifiedLeads">{{ $BoostaRepresentatives }}</span>
                                         </a>
@@ -109,7 +109,7 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <form method="GET" action="{{ route('waiting-representatives.index') }}" class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">البحث</label>
                             <input type="text" name="search" class="form-control" placeholder="البحث في المندوبين..."
                                 value="{{ request('search') }}">
@@ -149,7 +149,32 @@
                             </select>
                         </div>
 
+                        <div class="col-md-2">
+                            <label class="form-label">المحافظة</label>
+                            <select name="governorate_id" id="governorate_id" class="form-control">
+                                <option value="">جميع المحافظات</option>
+                                @foreach(\App\Models\Governorate::all() as $governorate)
+                                    <option value="{{ $governorate->id }}"
+                                        {{ request('governorate_id') == $governorate->id ? 'selected' : '' }}>
+                                        {{ $governorate->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
+                        <div class="col-md-2">
+                            <label class="form-label">المنطقة</label>
+                            <select name="location_id" id="location_id" class="form-control">
+                                <option value="">جميع المناطق</option>
+                                @foreach(\App\Models\Location::all() as $location)
+                                    <option value="{{ $location->id }}"
+                                        data-governorate="{{ $location->governorate_id }}"
+                                        {{ request('location_id') == $location->id ? 'selected' : '' }}>
+                                        {{ $location->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
                         <div class="col-md-3 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary me-2">تصفية</button>
@@ -184,6 +209,8 @@
                                                 <th>اسم المندوب</th>
                                                 <th>المحافظة</th>
                                                 <th>الشركة</th>
+                                                <th>سبب التأجيل</th>
+                                                <th>الحالة</th>
                                                 <th>التاريخ</th>
                                                 <th>الإجراءات</th>
                                             </tr>
@@ -219,9 +246,15 @@
                                                         <span
                                                             class="badge bg-info">{{ $waiting->representative->company->name ?? 'غير محدد' }}</span>
                                                     </td>
+                                                    <td>
+                                                        {{ $latestPostponeReasons[$waiting->representative_id] ?? '-' }}
+                                                    </td>
+                                                    <td>
+                                                        {{ $latestFollowupStatuses[$waiting->id] ?? '-' }}
+                                                    </td>
                                                     <td>{{ \Carbon\Carbon::parse($waiting->date)->format('d/m/Y') }}</td>
 
-                                                    <td class="d-flex gap-2">
+                                                    <td class="d-flex flex-wrap gap-2">
                                                         <button type="button" class="btn btn-sm btn-info" title="رسالة بدء العمل"
                                                             data-bs-toggle="modal" data-bs-target="#interviewModal"
                                                             data-id="{{ $waiting->representative_id}}">
@@ -236,6 +269,21 @@
                                                             تغير المنطقه
                                                         </button>
 
+                                                        <button type="button"
+                                                            class="btn btn-sm btn-outline-success openFollowupModal"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#followupModal"
+                                                            data-waiting-id="{{ $waiting->id }}">
+                                                            متابعة
+                                                        </button>
+
+                                                        <button type="button"
+                                                            class="btn btn-sm btn-outline-danger openResignModal"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#resignModal"
+                                                            data-rep-id="{{ $waiting->representative_id }}">
+                                                            استقاله
+                                                        </button>
 
 
                                                     </td>
@@ -379,161 +427,108 @@
         </div>
     </div>
 
+    <div class="modal fade" id="followupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="POST" id="followupForm">
+                @csrf
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">متابعة المندوب</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="followupHistory" class="mb-3 d-none">
+                            <label class="fw-bold">المتابعات السابقة</label>
+                            <div class="border rounded p-2 bg-light" id="followupHistoryList"></div>
+                        </div>
+
+                        <label class="fw-bold">الحالة</label>
+                        <select name="status" class="form-select" required>
+                            <option value="">اختر الحالة</option>
+                            <option value="لم يرد">لم يرد</option>
+                            <option value="متابعة مره اخري">متابعة مره اخري</option>
+                            <option value="تغيير الشركه">تغيير الشركه</option>
+                        </select>
+
+                        <label class="mt-3 fw-bold">تاريخ المتابعة</label>
+                        <input type="date" name="follow_up_date" class="form-control">
+
+                        <label class="mt-3 fw-bold">ملاحظات</label>
+                        <textarea name="note" class="form-control" rows="4" required
+                            placeholder="اكتب التفاصيل هنا..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-success">حفظ المتابعة</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="resignModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="POST" id="resignForm">
+                @csrf
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">استقاله المندوب</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <label class="fw-bold">مكان الاستلام</label>
+                        <input type="text" name="pickup_location" class="form-control" required>
+
+                        <label class="mt-3 fw-bold">التاريخ</label>
+                        <input type="date" name="appointment_date" class="form-control" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-danger">إرسال رسالة الاستقالة</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
 @endsection
 
 @push('scripts')
 
     <script>
-        /* document.addEventListener('DOMContentLoaded', function () {
-
-            const interviewModal = document.getElementById('interviewModal');
-
-            interviewModal.addEventListener('show.bs.modal', function (event) {
-                const button = event.relatedTarget; // الزرار اللي فتح المودال
-                const repId = button.getAttribute('data-id');
-
-                // حط id جوه الفورم
-                const hiddenInput = interviewModal.querySelector('input[name="representative_id"]');
-                hiddenInput.value = repId;
-
-                // حدّث الفورم عشان يبعت للـ route الصح
-                const form = interviewModal.querySelector('form');
-                form.action = "{{ route('waiting-representatives.startRealRepresentative', ':id') }}"
-                    .replace(':id', repId);
-            });
-            // Interview modal functionality
-            const interviewGovSelect = document.getElementById('interview_government_id');
-            const interviewLocSelect = document.getElementById('interview_location_id');
-            const interviewMessageSelect = document.getElementById('interview_message_id');
-            const messagePreview = document.getElementById('messagePreview');
-
-            // Load locations when governorate changes
-            if (interviewGovSelect && interviewLocSelect) {
-                interviewGovSelect.addEventListener('change', function () {
-                    const governorateId = this.value;
-
-                    if (!governorateId) {
-                        interviewLocSelect.innerHTML = '<option value="">اختر المنطقة</option>';
-                        // Clear messages when governorate is cleared
-                        if (interviewMessageSelect) {
-                            interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                            messagePreview.innerHTML = '<small class="text-muted">اختر المحافظة لعرض الرسائل المتاحة</small>';
-                        }
-                        return;
-                    }
-
-                    fetch(`{{ url('getlocations') }}/${governorateId}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            interviewLocSelect.innerHTML = '<option value="">اختر المنطقة</option>';
-                            data.forEach(loc => {
-                                interviewLocSelect.innerHTML += `<option value="${loc.id}">${loc.name}</option>`;
-                            });
-
-                            // Load messages for government only (without location)
-                            loadMessagesForGovernment(governorateId);
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            interviewLocSelect.innerHTML = '<option value="">خطأ في تحميل البيانات</option>';
-                        });
-                });
-            }
-
-            // Load messages when location changes
-            if (interviewLocSelect && interviewMessageSelect) {
-                interviewLocSelect.addEventListener('change', function () {
-                    const locationId = this.value;
-                    const governorateId = interviewGovSelect.value;
-
-                    if (!governorateId) {
-                        interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                        messagePreview.innerHTML = '<small class="text-muted">اختر المحافظة أولاً</small>';
-                        return;
-                    }
-
-                    if (!locationId) {
-                        // If location is cleared, load messages for government only
-                        loadMessagesForGovernment(governorateId);
-                        return;
-                    }
-
-                    // Load messages for specific government and location
-                    loadMessagesForGovernmentAndLocation(governorateId, locationId);
-                });
-            }
-
-            // Function to load messages for government only
-            function loadMessagesForGovernment(governorateId) {
-                if (!interviewMessageSelect) return;
-
-                fetch(`{{ url('getmessagesStartWork') }}?government_id=${governorateId}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                        data.forEach(msg => {
-                            interviewMessageSelect.innerHTML += `<option value="${msg.id}">${msg.description}</option>`;
-                        });
-                        messagePreview.innerHTML = '<small class="text-muted">اختر الرسالة لعرض المعاينة</small>';
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        interviewMessageSelect.innerHTML = '<option value="">خطأ في تحميل الرسائل</option>';
-                        messagePreview.innerHTML = '<small class="text-danger">خطأ في تحميل الرسائل</small>';
-                    });
-            }
-
-            // Function to load messages for specific government and location
-            function loadMessagesForGovernmentAndLocation(governorateId, locationId) {
-                if (!interviewMessageSelect) return;
-
-                fetch(`{{ url('getmessagesStartWork') }}?government_id=${governorateId}&location_id=${locationId}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        interviewMessageSelect.innerHTML = '<option value="">اختر الرسالة</option>';
-                        data.forEach(msg => {
-                            interviewMessageSelect.innerHTML += `<option value="${msg.id}">${msg.description}</option>`;
-                        });
-                        messagePreview.innerHTML = '<small class="text-muted">اختر الرسالة لعرض المعاينة</small>';
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        interviewMessageSelect.innerHTML = '<option value="">خطأ في تحميل الرسائل</option>';
-                        messagePreview.innerHTML = '<small class="text-danger">خطأ في تحميل الرسائل</small>';
-                    });
-            }
-
-            // Show message preview when message is selected
-            if (interviewMessageSelect && messagePreview) {
-                interviewMessageSelect.addEventListener('change', function () {
-                    const messageId = this.value;
-
-                    if (!messageId) {
-                        messagePreview.innerHTML = '<small class="text-muted">اختر الرسالة لعرض المعاينة</small>';
-                        return;
-                    }
-
-                    fetch(`{{ url('getmessageStartWork') }}/${messageId}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            messagePreview.innerHTML = `
-                                                                                                 <div class="mb-2"><strong>الوصف:</strong> ${data.description}</div>
-                                                                                                 ${data.google_map_url ? `<div><strong>رابط الخريطة:</strong> <a href="${data.google_map_url}" target="_blank">${data.google_map_url}</a></div>` : ''}
-                                                                                             `;
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            messagePreview.innerHTML = '<small class="text-danger">خطأ في تحميل الرسالة</small>';
-                        });
-                });
-            }
-
-
-        }); */
-
-
 
         document.addEventListener('DOMContentLoaded', function () {
+        const allLocationOptions = $('#location_id').html();
+
+        $('#governorate_id').on('change', function () {
+            const governorateId = $(this).val();
+            const locationSelect = $('#location_id');
+
+            locationSelect.html(allLocationOptions);
+
+            if (governorateId) {
+                locationSelect.find('option').each(function () {
+                    const option = $(this);
+                    const optionGovernorate = option.data('governorate');
+                    if (option.val() !== '' && optionGovernorate != governorateId) {
+                        option.remove();
+                    }
+                });
+            }
+
+            locationSelect.val('').trigger('change');
+        });
+
+        const initialGovernorateId = "{{ request('governorate_id') }}";
+        const initialLocationId = "{{ request('location_id') }}";
+        if (initialGovernorateId) {
+            $('#governorate_id').trigger('change');
+            if (initialLocationId) {
+                setTimeout(function () {
+                    $('#location_id').val(initialLocationId).trigger('change');
+                }, 100);
+            }
+        }
 
         var interviewModal = document.getElementById('interviewModal');
         var interviewForm  = document.getElementById('interviewForm');
@@ -728,6 +723,59 @@
             }
 
 
+        });
+    </script>
+
+    <script>
+        document.querySelectorAll('.openFollowupModal').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const id = this.dataset.waitingId;
+                const form = document.getElementById('followupForm');
+                form.action = "{{ route('waiting-representatives.followup', ':id') }}".replace(':id', id);
+
+                const historyWrapper = document.getElementById('followupHistory');
+                const historyList = document.getElementById('followupHistoryList');
+                historyWrapper.classList.add('d-none');
+                historyList.innerHTML = '';
+
+                fetch("{{ route('waiting-representatives.followup-history', ':id') }}".replace(':id', id))
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.success || !data.items || data.items.length === 0) {
+                            return;
+                        }
+
+                        historyWrapper.classList.remove('d-none');
+                        historyList.innerHTML = data.items.map(item => {
+                            const date = item.follow_up_date ? new Date(item.follow_up_date).toLocaleDateString('ar-EG') : '-';
+                            const status = item.status || '';
+                            const note = item.note || '';
+                            const createdAt = item.created_at ? new Date(item.created_at).toLocaleDateString('ar-EG') : '';
+                            const createdBy = item.created_by_name || '';
+                            return `
+                                <div class="mb-2 p-2 border rounded bg-white">
+                                    <div><strong>الحالة:</strong> ${status}</div>
+                                    <div><strong>تاريخ المتابعة:</strong> ${date}</div>
+                                    <div><strong>الملاحظات:</strong> ${note}</div>
+                                    <div><strong>أضيف بواسطة:</strong> ${createdBy || '-'}</div>
+                                </div>
+                            `;
+                        }).join('');
+                    })
+                    .catch(() => {
+                        // ignore history errors
+                    });
+            });
+        });
+    </script>
+
+    <script>
+        document.querySelectorAll('.openResignModal').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const id = this.dataset.repId;
+                const form = document.getElementById('resignForm');
+                form.action = "{{ route('waiting-representatives.resign', ':id') }}".replace(':id', id);
+            });
         });
     </script>
 @endpush

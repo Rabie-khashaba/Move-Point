@@ -6,6 +6,8 @@ use App\Models\MessageWorking;
 use App\Models\Representative;
 use App\Models\WaitingRepresentative;
 use App\Models\WorkStart;
+use App\Models\WaitingRepresentativeFollowup;
+use App\Models\TrainingSessionPostpone;
 use Illuminate\Http\Request;
 use App\Services\WhatsAppWorkService;
 
@@ -39,7 +41,7 @@ class WaitingRepresentativeController extends Controller
                             //->orWhere('governorate_id', $search)
                             // Location ID
                             //->orWhere('location_id', $search)
-    
+
                             // Governorate name
                             ->orWhereHas('governorate', function ($gov) use ($search) {
                                 $gov->where('name', 'like', "%{$search}%");
@@ -59,6 +61,16 @@ class WaitingRepresentativeController extends Controller
                     $rep->where('company_id', request('company_id'));
                 })
             )
+            ->when(request('governorate_id'), function ($q) {
+                $q->whereHas('representative', function ($rep) {
+                    $rep->where('governorate_id', request('governorate_id'));
+                });
+            })
+            ->when(request('location_id'), function ($q) {
+                $q->whereHas('representative', function ($rep) {
+                    $rep->where('location_id', request('location_id'));
+                });
+            })
             ->orderBy('date', 'desc');
 
         // Pagination
@@ -80,7 +92,75 @@ class WaitingRepresentativeController extends Controller
             ->where('company_id', 10)
             ->count();
 
-        return view('waiting-representatives.index', compact('waitings', 'totalRepresentatives', 'NoonRepresentatives', 'BoostaRepresentatives'));
+        $latestPostponeReasons = TrainingSessionPostpone::join('training_sessions', 'training_sessions.id', '=', 'training_session_postpones.training_session_id')
+            ->whereIn('training_sessions.representative_id', $representativeIds)
+            ->orderBy('training_session_postpones.created_at', 'desc')
+            ->get(['training_sessions.representative_id as representative_id', 'training_session_postpones.reason'])
+            ->groupBy('representative_id')
+            ->map(fn($items) => $items->first()?->reason)
+            ->toArray();
+
+        $latestFollowupStatuses = WaitingRepresentativeFollowup::whereIn('waiting_representative_id', $waitings->pluck('id'))
+            ->orderBy('created_at', 'desc')
+            ->get(['waiting_representative_id', 'status'])
+            ->groupBy('waiting_representative_id')
+            ->map(fn($items) => $items->first()?->status)
+            ->toArray();
+
+        return view('waiting-representatives.index', compact(
+            'waitings',
+            'totalRepresentatives',
+            'NoonRepresentatives',
+            'BoostaRepresentatives',
+            'latestPostponeReasons',
+            'latestFollowupStatuses'
+        ));
+    }
+
+    public function followupStore(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|string|in:لم يرد,متابعة مره اخري,تغيير الشركه',
+            'follow_up_date' => 'nullable|date',
+            'note' => 'required|string',
+        ]);
+
+        $waiting = WaitingRepresentative::findOrFail($id);
+
+        WaitingRepresentativeFollowup::create([
+            'waiting_representative_id' => $waiting->id,
+            'status' => $request->status,
+            'follow_up_date' => $request->follow_up_date,
+            'note' => $request->note,
+            'created_by' => auth()->id(),
+        ]);
+
+        return redirect()->route('waiting-representatives.index')->with('success', 'تم حفظ المتابعة بنجاح.');
+    }
+
+    public function followupHistory($id)
+    {
+        $waiting = WaitingRepresentative::findOrFail($id);
+
+        $items = WaitingRepresentativeFollowup::where('waiting_representative_id', $waiting->id)
+            ->orderBy('created_at', 'desc')
+            ->with('createdBy:id,name')
+            ->get(['id', 'status', 'follow_up_date', 'note', 'created_at', 'created_by'])
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'status' => $item->status,
+                    'follow_up_date' => $item->follow_up_date,
+                    'note' => $item->note,
+                    'created_at' => $item->created_at,
+                    'created_by_name' => optional($item->createdBy)->name,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'items' => $items,
+        ]);
     }
 
 
@@ -141,6 +221,29 @@ class WaitingRepresentativeController extends Controller
         ]);
 
         return redirect()->route(route: 'waiting-representatives.index')->with('success', "تم تغير المنطقه بنجاح ");
+    }
+
+    public function resign(Request $request, $id)
+    {
+        $request->validate([
+            'pickup_location' => 'required|string|max:255',
+            'appointment_date' => 'required|date',
+        ]);
+
+        $representative = Representative::findOrFail($id);
+
+        $representative->update([
+            'is_active' => false,
+            'resign_date' => now(),
+            'unresign_date' => null,
+            'unresign_by' => null,
+        ]);
+
+        $message = "يرجى التوجه إلى {$request->pickup_location} لاستلام اوراق الاستقالة بتاريخ {$request->appointment_date}.";
+
+        $this->whatsappService->send($representative->phone, $message);
+
+        return redirect()->route('waiting-representatives.index')->with('success', 'تم إرسال رسالة الاستقالة بنجاح.');
     }
 
 }

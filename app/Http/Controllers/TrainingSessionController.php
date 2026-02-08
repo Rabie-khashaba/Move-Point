@@ -9,8 +9,9 @@ use App\Models\Representative;
 use App\Models\Governorate;
 use App\Models\Location;
 use App\Models\Message;
-use App\Models\WaitingRepresentative;
 use App\Models\WorkStart;
+use App\Models\WaitingRepresentative;
+use App\Models\TrainingSessionPostpone;
 use App\Services\WhatsAppWorkService;
 
 use Illuminate\Http\Request;
@@ -68,6 +69,12 @@ class TrainingSessionController extends Controller
                     ->orWhere('phone', 'like', "%{$search}%");
                 })
             )
+            ->when(request('governorate_id'), function ($q) {
+                $q->where('governorate_id', request('governorate_id'));
+            })
+            ->when(request('location_id'), function ($q) {
+                $q->where('location_id', request('location_id'));
+            })
             ->when(
                 request('company_id'),
                 fn($q) =>
@@ -83,10 +90,19 @@ class TrainingSessionController extends Controller
             ->orderBy('date', 'desc');
 
         // Pagination
+        $statsQuery = clone $sessionsQuery;
         $sessions = $sessionsQuery->paginate(20)->appends(request()->query());
 
+        $sessionIds = $sessions->pluck('id');
+        $latestPostponeReasons = TrainingSessionPostpone::whereIn('training_session_id', $sessionIds)
+            ->orderBy('created_at', 'desc')
+            ->get(['training_session_id', 'reason'])
+            ->groupBy('training_session_id')
+            ->map(fn($items) => $items->first()?->reason)
+            ->toArray();
+
         // IDs المندوبين الموجودين في الجلسات بعد الفلترة
-        $representativeIds = (clone $sessionsQuery)
+        $representativeIds = (clone $statsQuery)
             ->pluck('representative_id')
             ->unique();
 
@@ -107,7 +123,16 @@ class TrainingSessionController extends Controller
             ->where('is_active', 0)
             ->count();
 
-        return view('training_sessions.index', compact('sessions', 'totalRepresentatives', 'attendedRepresentatives', 'notAttendedRepresentatives', 'inactiveRepresentatives'));
+
+
+        return view('training_sessions.index', compact(
+            'sessions',
+            'totalRepresentatives',
+            'attendedRepresentatives',
+            'notAttendedRepresentatives',
+            'inactiveRepresentatives',
+            'latestPostponeReasons'
+        ));
     }
 
     public function create()
@@ -171,20 +196,12 @@ class TrainingSessionController extends Controller
 
     public function toggleStatus(Request $request, $id)
     {
-        //return $request;
 
-        // $representative = Representative::find($id);
-
-        // $representative->update([
-        //     'is_active' => !$representative->is_active
-        // ]);
 
         $representative = Representative::findOrFail($id);
 
-        // الحالة الجديدة
-       // $newStatus = !$representative->is_active;
 
-        // لو تغيير الحالة من نشط → غير نشط (يعني استقالة)
+
         if ($representative->is_active ) {
 
             $request->validate([
@@ -211,45 +228,15 @@ class TrainingSessionController extends Controller
             ]);
         }
 
-        // تحديث حالة المندوب
-        /* $representative->update([
-            'is_active' => $newStatus,
-            'resign_date' => now(),
-            'unresign_date' => null,
-            'unresign_by' => null,
-        ]); */
 
-        // Sync user table status
-       // try {
-         //   if ($representative->user) {
-         //       $representative->user->update(['is_active' => $representative->is_active]);
-         //   }
-        //} catch (\Throwable $e) {
-        //}
 
-        $status = $representative->is_active ? 'نشط' : 'غير نشط';
-        return redirect()->route('training_sessions.index')->with('success', "تم تغيير حالة المندوب إلى: {$status}");
-    }
-
-    public function activeResigne(Request $request, $id)
-    {
-        //return  $id;
-        $representative = Representative::findOrFail($id);
-        $representative->update([
-            'is_active' => true,                 // تفعيل
-            'unresign_date' => now(),            // تاريخ التفعيل
-            'unresign_by' => \Illuminate\Support\Facades\Auth::id(),       // المستخدم الذي فعل
-            'resign_date' => null,
-        ]);
-
-        // إعادة التوجيه مع رسالة نجاح
-        return redirect()->back()->with('success', 'تم تفعيل المندوب بنجاح');
+        return redirect()->route(route: 'training_sessions.index')->with('success', "تم تحويل  الشخص الي طلبات الاستقاله");
     }
 
 
     public function StartRealRepresentative(Request $request, $id)
     {
-        //return $id;
+        //return $request;
         $request->validate([
             'date' => 'required|date',
             'message_id' => 'required',
@@ -273,22 +260,36 @@ class TrainingSessionController extends Controller
         );
 
         // Send WhatsApp message with Google Maps URL
-        $whatsappResult = $this->whatsappService->send($representative->phone, $message->description, $request->date, $message->google_map_url, null);
+       // $whatsappResult = $this->whatsappService->send($representative->phone, $message->description, $request->date, $message->google_map_url, null);
+
+       $employee = auth()->user()?->employee;
+            $deviceToken = $employee?->device?->device_token;
+
+            $whatsapp = app(\App\Services\WhatsAppServicebyair::class);
+            $result = $whatsapp->send2($representative->phone, $message->description, $request->date, $message->google_map_url,null, $deviceToken);
 
         return redirect()->route(route: 'training_sessions.index')->with('success', "تم بدء الجلسة بنجاح");
 
     }
 
+    public function activeResigne(Request $request, $id){
+        //return  $id;
+        $representative = Representative::findOrFail($id);
+        $representative->update([
+            'is_active' => true,                 // تفعيل
+            'unresign_date' => now(),            // تاريخ التفعيل
+            'unresign_by' => auth()->id(),       // المستخدم الذي فعل
+            'resign_date' => null ,
+        ]);
+
+        // إعادة التوجيه مع رسالة نجاح
+        return redirect()->back()->with('success', 'تم تفعيل المندوب بنجاح');
+    }
+
     public function noLocation(Request $request, $id)
     {
         //return $id;
-        // WaitingRepresentative::create([
-        // 'representative_id' => $id,
-        // 'date' => now(),
-        // 'status' => 0,
-        //]);
-
-        WaitingRepresentative::updateOrCreate(
+         WaitingRepresentative::updateOrCreate(
             ['representative_id' => $id], // الشرط
             [
                 'date' => now(),
@@ -300,5 +301,60 @@ class TrainingSessionController extends Controller
         return redirect()->route(route: 'training_sessions.index')->with('success', "تم إضافة المندوب إلى قائمة الانتظار بنجاح");
 
     }
+
+    public function postpone(Request $request, $id)
+    {
+        $request->validate([
+            'reason' => 'required|string|in:مرضي,الـ zone مقفول,اخرى',
+            'follow_up_date' => 'nullable|date',
+            'note' => 'required|string',
+        ]);
+
+        $session = TrainingSession::with('representative')->findOrFail($id);
+
+        TrainingSessionPostpone::create([
+            'training_session_id' => $session->id,
+            'follow_up_date' => $request->follow_up_date,
+            'reason' => $request->reason,
+            'note' => $request->note,
+            'created_by' => auth()->id(),
+        ]);
+
+        WaitingRepresentative::updateOrCreate(
+            ['representative_id' => $session->representative_id],
+            [
+                'date' => $request->follow_up_date ?? now(),
+                'status' => 0,
+            ]
+        );
+
+        return redirect()->route('training_sessions.index')->with('success', 'تم تأجيل الجلسة وإضافة المندوب لقائمة المنتظرين.');
+    }
+
+    public function postponeHistory($id)
+    {
+        $session = TrainingSession::findOrFail($id);
+
+        $items = TrainingSessionPostpone::where('training_session_id', $session->id)
+            ->orderBy('created_at', 'desc')
+            ->with('createdBy:id,name')
+            ->get(['id', 'reason', 'follow_up_date', 'note', 'created_at', 'created_by'])
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'reason' => $item->reason,
+                    'follow_up_date' => $item->follow_up_date,
+                    'note' => $item->note,
+                    'created_at' => $item->created_at,
+                    'created_by_name' => optional($item->createdBy)->name,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'items' => $items,
+        ]);
+    }
+
 
 }

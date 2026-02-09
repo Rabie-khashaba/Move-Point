@@ -176,6 +176,14 @@
                             <option value="pending" {{ request('document_received') === 'pending' ? 'selected' : '' }}> لم  يتم  استلام الاوراق</option>
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <label class="form-label">كود المندوب</label>
+                        <select name="code_status" class="form-control">
+                            <option value="">جميع الحالات</option>
+                            <option value="with" {{ request('code_status') === 'with' ? 'selected' : '' }}>يمتلك كود</option>
+                            <option value="without" {{ request('code_status') === 'without' ? 'selected' : '' }}>لا يمتلك كود</option>
+                        </select>
+                    </div>
                     <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2">تصفية</button>
                         <a href="{{ route('representatives.index') }}" class="btn btn-light">مسح</a>

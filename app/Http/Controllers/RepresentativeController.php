@@ -5,10 +5,13 @@ use App\Models\Company;
 use App\Models\Governorate;
 use App\Models\Location;
 use App\Models\User;
+use App\Models\Representative;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\RepresentativesExport;
+
+
 
 
 class RepresentativeController extends Controller
@@ -22,82 +25,121 @@ class RepresentativeController extends Controller
 
     public function index(Request $request)
     {
-        //return $request;
         $this->authorize('view_representatives');
 
-        $query = \App\Models\Representative::where('status', 1)
-            ->where('is_active', 1)
-            ->with(['company', 'user', 'supervisors', 'location', 'governorate'])->withCount('deliveryDeposits');
+        //  $query = \App\Models\Representative::where('status', 1)
+        //     ->where('is_active', 1)
+        //     ->with(['company', 'user', 'supervisors', 'location', 'governorate'])->withCount('deliveryDeposits');
 
-        // بحث بالكلمات
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%")
-                    ->orWhere('national_id', 'like', "%{$search}%");
-            });
-        }
+        // // بحث بالكلمات
+        // if ($request->filled('search')) {
+        //     $search = $request->search;
+        //     $query->where(function($q) use ($search) {
+        //         $q->where('name', 'like', "%{$search}%")
+        //         ->orWhere('phone', 'like', "%{$search}%")
+        //         ->orWhere('code', 'like', "%{$search}%")
+        //         ->orWhere('national_id', 'like', "%{$search}%");
+        //     });
+        // }
 
-        // التاريخ
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
+        // // التاريخ
+        // if ($request->filled('date_from')) {
+        //     $query->whereDate('start_date', '>=', $request->date_from);
+        // }
 
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
+        // if ($request->filled('date_to')) {
+        //     $query->whereDate('start_date', '<=', $request->date_to);
+        // }
 
-        // الشركة
-        if ($request->filled('company_id')) {
-            $query->where('company_id', $request->company_id);
-        }
+        // // الشركة
+        // if ($request->filled('company_id')) {
+        //     $query->where('company_id', $request->company_id);
+        // }
 
-        // الموظف
-        if ($request->filled('employee_id')) {
-            $query->where('employee_id', $request->employee_id);
-        }
+        // // الموظف
+        // if ($request->filled('employee_id')) {
+        //     $query->where('employee_id', $request->employee_id);
+        // }
 
-        // Documents received filter
-       if ($request->filled('document_received')) {
-            $query->where('documents_received', $request->document_received);
-        }
-
-        $representatives = $query->paginate(20);
+        // $representatives = $query->paginate(20);
 
 
 
-        //statistics
-        /* $totalRepresentatives = \App\Models\Representative::where('status', 1)->where('is_active',1)->count();
-        $NoonRepresentatives = \App\Models\Representative::where('status', 1)->where('is_active',1)->where('company_id',9)->count();
-        $boostaRepresentatives = \App\Models\Representative::where('status', 1)->where('is_active',1)->where('company_id',10)->count(); */
+        // //statistics
+        // /* $totalRepresentatives = \App\Models\Representative::where('status', 1)->where('is_active',1)->count();
+        // $NoonRepresentatives = \App\Models\Representative::where('status', 1)->where('is_active',1)->where('company_id',9)->count();
+        // $boostaRepresentatives = \App\Models\Representative::where('status', 1)->where('is_active',1)->where('company_id',10)->count(); */
 
-        $dateFrom = $request->filled('date_from') ? $request->date_from : null;
-        $dateTo = $request->filled('date_to') ? $request->date_to : null;
+        // $dateFrom = $request->filled('date_from') ? $request->date_from : null;
+        // $dateTo   = $request->filled('date_to') ? $request->date_to : null;
 
-        $totalRepresentatives = \App\Models\Representative::where('status', 1)
-            ->where('is_active', 1)
-            ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
-            ->count();
+        // $totalRepresentatives = \App\Models\Representative::where('status', 1)
+        //     ->where('is_active', 1)
+        //     ->when($dateFrom, fn($q) => $q->whereDate('start_date', '>=', $dateFrom))
+        //     ->when($dateTo, fn($q) => $q->whereDate('start_date', '<=', $dateTo))
+        //     ->count();
 
-        $NoonRepresentatives = \App\Models\Representative::where('status', 1)
-            ->where('is_active', 1)
-            ->where('company_id', 9)
-            ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
-            ->count();
+        // $NoonRepresentatives = \App\Models\Representative::where('status', 1)
+        //     ->where('is_active', 1)
+        //     ->where('company_id', 9)
+        //     ->when($dateFrom, fn($q) => $q->whereDate('start_date', '>=', $dateFrom))
+        //     ->when($dateTo, fn($q) => $q->whereDate('start_date', '<=', $dateTo))
+        //     ->count();
 
-        $boostaRepresentatives = \App\Models\Representative::where('status', 1)
-            ->where('is_active', 1)
-            ->where('company_id', 10)
-            ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
-            ->count();
+        // $boostaRepresentatives = \App\Models\Representative::where('status', 1)
+        //     ->where('is_active', 1)
+        //     ->where('company_id', 10)
+        //     ->when($dateFrom, fn($q) => $q->whereDate('start_date', '>=', $dateFrom))
+        //     ->when($dateTo, fn($q) => $q->whereDate('start_date', '<=', $dateTo))
+        //     ->count();
 
 
-        return view('representatives.index', compact('representatives', 'totalRepresentatives', 'NoonRepresentatives', 'boostaRepresentatives'));
+
+        // Base Query
+        $baseQuery = Representative::where('status', 1)
+                ->where('is_active', 1)
+                ->when($request->filled('date_from'), fn($q) => $q->whereDate('converted_to_active_date', '>=', $request->date_from))
+                ->when($request->filled('date_to'), fn($q) => $q->whereDate('converted_to_active_date', '<=', $request->date_to))
+                ->when($request->filled('employee_id'), fn($q) => $q->where('employee_id', $request->employee_id))
+                ->when($request->filled('document_received'), fn($q) => $q->where('documents_received', $request->document_received))
+                ->when($request->filled('code_status'), function ($q) use ($request) {
+                    if ($request->code_status === 'with') {
+                        $q->whereNotNull('code')->where('code', '!=', '');
+                    } elseif ($request->code_status === 'without') {
+                        $q->where(function ($qq) {
+                            $qq->whereNull('code')->orWhere('code', '');
+                        });
+                    }
+                })
+                ->when($request->filled('company_id'), fn($q) => $q->where('company_id', $request->company_id))
+                ->when($request->filled('search'), function($q) use ($request){
+                    $q->where(function($qq) use ($request){
+                        $qq->where('name', 'like', "%{$request->search}%")
+                           ->orWhere('phone', 'like', "%{$request->search}%")
+                           ->orWhere('code', 'like', "%{$request->search}%")
+                           ->orWhere('national_id', 'like', "%{$request->search}%");
+                    });
+                });
+
+            // Pagination (main data)
+            $representatives = (clone $baseQuery)
+                ->with(['company', 'user', 'supervisors', 'location', 'governorate'])
+                ->withCount('deliveryDeposits')
+                ->paginate(20);
+
+            // Statistics
+            $totalRepresentatives = (clone $baseQuery)->count();
+
+            $NoonRepresentatives = (clone $baseQuery)
+                ->where('company_id', 9)
+                ->count();
+
+            $boostaRepresentatives = (clone $baseQuery)
+                ->where('company_id', 10)
+                ->count();
+
+
+        return view('representatives.index', compact('representatives','totalRepresentatives','NoonRepresentatives','boostaRepresentatives'));
     }
 
     public function create(Request $request)
@@ -107,13 +149,17 @@ class RepresentativeController extends Controller
         $governorates = Governorate::all();
         $locations = Location::all();
 
+        $users = User::where('type','employee')->whereHas('employee', function ($query) {
+                $query->where('department_id', 7)->where('is_active', true);
+            })->get();
+
         // Get lead data if lead_id is provided
         $lead = null;
         if ($request->has('lead_id')) {
             $lead = \App\Models\Lead::find($request->lead_id);
         }
 
-        return view('representatives.create', compact('companies', 'governorates', 'locations', 'lead'));
+        return view('representatives.create', compact('companies', 'governorates', 'locations', 'lead' , 'users'));
     }
 
     public function store(Request $request)
@@ -121,7 +167,7 @@ class RepresentativeController extends Controller
         $this->authorize('create_representatives');
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|digits:11|unique:users,phone',
+            'phone' => 'required|digits:11',
             'address' => 'required|string|max:500',
             'contact' => 'required|string|max:255',
             'national_id' => 'required|digits:14|unique:representatives,national_id',
@@ -154,36 +200,87 @@ class RepresentativeController extends Controller
         $this->authorize('view_representatives');
         $representative = $this->service->find($id);
 
+         $workStartDate = \App\Models\WorkStart::where('representative_id', $representative->id)
+            ->latest('date')
+            ->value('date');
+
+
+        $trainingDate = \App\Models\TrainingSession::where('representative_id', $representative->id)->first();
+
+
+
+
         // Process attachments to include proper URLs
+        // if ($representative->attachments) {
+        //     // Check if attachments is already an array or needs to be decoded
+        //     if (is_string($representative->attachments)) {
+        //         $attachments = json_decode($representative->attachments, true);
+        //     } else {
+        //         $attachments = $representative->attachments;
+        //     }
+
+        //     if (is_array($attachments)) {
+        //         $representative->attachments_with_urls = array_map(function($path) {
+        //             // Check if path is already a full URL
+        //             if (filter_var($path, FILTER_VALIDATE_URL)) {
+        //                 return [
+        //                     'path' => $path,
+        //                     'url' => $path,
+        //                     'src' => $path
+        //                 ];
+        //             } else {
+        //                 return [
+        //                     'path' => $path,
+        //                     'url' => asset('storage/app/public/' . $path),
+        //                     'src' => asset('storage/app/public/' . $path)
+        //                 ];
+        //             }
+        //         }, $attachments);
+        //     }
+        // }
+
+        // return view('representatives.show', compact('representative'));
+
+        //  $this->authorize('view_representatives');
+        // $representative = $this->service->find($id);
+
+
+
         if ($representative->attachments) {
-            // Check if attachments is already an array or needs to be decoded
-            if (is_string($representative->attachments)) {
-                $attachments = json_decode($representative->attachments, true);
-            } else {
-                $attachments = $representative->attachments;
-            }
+            // Decode إذا كان String
+            $attachments = is_string($representative->attachments)
+                ? json_decode($representative->attachments, true)
+                : $representative->attachments;
 
             if (is_array($attachments)) {
-                $representative->attachments_with_urls = array_map(function ($path) {
-                    // Check if path is already a full URL
-                    if (filter_var($path, FILTER_VALIDATE_URL)) {
-                        return [
-                            'path' => $path,
-                            'url' => $path,
-                            'src' => $path
-                        ];
-                    } else {
-                        return [
-                            'path' => $path,
-                            'url' => asset('storage/app/public/' . $path),
-                            'src' => asset('storage/app/public/' . $path)
-                        ];
+                $representative->attachments_with_urls = array_map(function($attachment) {
+                    $path = $attachment['path'] ?? null;
+                    $type = $attachment['type'] ?? 'مرفق غير معروف';
+
+                    if (!$path) {
+                        return null;
                     }
+
+                    // Generate URL
+                    $url = filter_var($path, FILTER_VALIDATE_URL)
+                        ? $path
+                        : asset('storage/' . $path);
+
+                    return [
+                        'type' => $type,
+                        'path' => $path,
+                        'url'  => $url,
+                        'src'  => $url,
+                    ];
                 }, $attachments);
+
+                // Remove nulls لو فيه مرفق بايظ
+                $representative->attachments_with_urls = array_filter($representative->attachments_with_urls);
             }
         }
 
-        return view('representatives.show', compact('representative'));
+
+        return view('representatives.show', compact('representative','workStartDate','trainingDate'));
     }
 
     public function downloadAttachment($id, $index)
@@ -205,44 +302,44 @@ class RepresentativeController extends Controller
                 abort(404, 'الملف غير موجود');
             }
 
-            $attachment = $attachments[$index];
+        $attachment = $attachments[$index];
 
-            // Security: Ensure the attachment path is within the storage directory
-            $fixedAttachment = str_replace(['\\', '//'], ['/', '/'], $attachment);
-            $filePath = storage_path('app/public/' . $fixedAttachment);
+        // Security: Ensure the attachment path is within the storage directory
+        $fixedAttachment = str_replace(['\\', '//'], ['/', '/'], $attachment);
+        $filePath = storage_path('app/public/' . $fixedAttachment);
 
-            // Additional security check to prevent directory traversal
-            $realPath = realpath($filePath);
-            $storagePath = realpath(storage_path('app/public'));
+        // Additional security check to prevent directory traversal
+        $realPath = realpath($filePath);
+        $storagePath = realpath(storage_path('app/public'));
 
-            if (!$realPath || strpos($realPath, $storagePath) !== 0) {
-                abort(404, 'الملف غير موجود على الخادم');
-            }
+        if (!$realPath || strpos($realPath, $storagePath) !== 0) {
+            abort(404, 'الملف غير موجود على الخادم');
+        }
 
-            if (!file_exists($filePath)) {
-                abort(404, 'الملف غير موجود على الخادم');
-            }
+        if (!file_exists($filePath)) {
+            abort(404, 'الملف غير موجود على الخادم');
+        }
 
-            $fileName = basename($fixedAttachment);
-            $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        $fileName = basename($fixedAttachment);
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
-            $contentType = 'application/octet-stream';
-            switch ($extension) {
-                case 'pdf':
-                    $contentType = 'application/pdf';
-                    break;
-                case 'jpg':
-                case 'jpeg':
-                    $contentType = 'image/jpeg';
-                    break;
-                case 'png':
-                    $contentType = 'image/png';
-                    break;
-            }
+        $contentType = 'application/octet-stream';
+        switch ($extension) {
+            case 'pdf':
+                $contentType = 'application/pdf';
+                break;
+            case 'jpg':
+            case 'jpeg':
+                $contentType = 'image/jpeg';
+                break;
+            case 'png':
+                $contentType = 'image/png';
+                break;
+        }
 
-            return response()->download($filePath, $fileName, [
-                'Content-Type' => $contentType
-            ]);
+        return response()->download($filePath, $fileName, [
+            'Content-Type' => $contentType
+        ]);
         } catch (\Exception $e) {
             \Log::error('Error downloading attachment: ' . $e->getMessage(), [
                 'representative_id' => $id,
@@ -337,10 +434,11 @@ class RepresentativeController extends Controller
         $companies = Company::where('is_active', true)->get();
         $governorates = Governorate::all();
         $locations = Location::all();
-        $users = User::where('type', 'employee')->whereHas('employee', function ($query) {
-            $query->where('department_id', 7)->where('is_active', true);
-        })->get();
-        return view('representatives.edit', compact('representative', 'companies', 'governorates', 'locations', 'users'));
+
+        $users = User::where('type','employee')->whereHas('employee', function ($query) {
+                $query->where('department_id', 7)->where('is_active', true);
+            })->get();
+        return view('representatives.edit', compact('representative', 'companies', 'governorates', 'locations','users'));
     }
 
     public function update(Request $request, $id)
@@ -350,23 +448,26 @@ class RepresentativeController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => ['required', 'digits:11', Rule::unique('users')->ignore($representative->user_id)],
+            //'phone' => ['required', 'digits:11', Rule::unique('users')->ignore($representative->user_id)],
+            'phone' => 'required|digits:11',
             'address' => 'required|string|max:500',
-            'contact' => 'required|string|max:255',
+            'address_in_card' => 'required|string|max:500',
+            'contact' => 'nullable|string|max:255',
             'national_id' => ['required', 'digits:14', Rule::unique('representatives')->ignore($id)],
-            'salary' => 'required|numeric|min:0',
+            'salary' => 'nullable|numeric|min:0',
             'start_date' => 'nullable|date',
-            'company_id' => 'required|exists:companies,id',
+            'company_id' => 'nullable|exists:companies,id',
             'bank_account' => 'nullable|string|max:255',
             'code' => 'nullable|string|max:255',
             'attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'inquiry_checkbox' => 'boolean',
             'inquiry_data' => 'nullable|string|max:1000',
             'governorate_id' => 'required|exists:governorates,id',
-            'location_id' => 'nullable|exists:locations,id',
-            'home_location' => 'required|url|max:500',
+            'location_id' => 'required|exists:locations,id',
+            'home_location' => 'nullable|url|max:500',
             'is_active' => 'boolean',
-            'employee_id' => 'nullable|exists:users,id',
+            'employee_id' => 'required|exists:users,id',
+            'is_supervisor' => 'boolean', // ← أضفناها
         ]);
 
         $representative = $this->service->update($id, $validated);
@@ -402,10 +503,8 @@ class RepresentativeController extends Controller
         $this->authorize('edit_representatives');
         $representative = $this->service->find($id);
 
-        $newStatus = !$representative->is_active;
-
         $representative->update([
-            'is_active' => $newStatus,
+            'is_active' => !$representative->is_active
         ]);
 
         // Sync user table status
@@ -413,15 +512,13 @@ class RepresentativeController extends Controller
             if ($representative->user) {
                 $representative->user->update(['is_active' => $representative->is_active]);
             }
-        } catch (\Throwable $e) { /* ignore */
-        }
+        } catch (\Throwable $e) { /* ignore */ }
 
         $status = $representative->is_active ? 'نشط' : 'غير نشط';
         return redirect()->route('representatives.index')->with('success', "تم تغيير حالة المندوب إلى: {$status}");
     }
 
-
-    public function markNotCompleted($id)
+     public function markNotCompleted($id)
     {
         $this->authorize('edit_representatives');
         $representative = $this->service->find($id);
@@ -436,12 +533,9 @@ class RepresentativeController extends Controller
             ->with('success', 'تم تحويل المندوب الي مندوب  غير مكتمل');
     }
 
+
     public function export(Request $request)
     {
         return Excel::download(new RepresentativesExport($request), 'representatives.xlsx');
     }
-
-
-
-
 }

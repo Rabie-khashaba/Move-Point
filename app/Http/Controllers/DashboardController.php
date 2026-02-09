@@ -241,9 +241,44 @@ class DashboardController extends Controller
     }
 
 
-    $employees = Employee::where('department_id', 6)
+    $employees = Employee::where('department_id', 6)->where('is_active', true)
     ->withCount('leads')
     ->get();
+
+    $employees->each(function (Employee $employee) use ($dateFrom, $dateTo) {
+        $userId = $employee->user_id;
+
+        $leadBase = Lead::where('moderator_id', $userId)
+            ->join('governorates', 'leads.governorate_id', '=', 'governorates.id')
+            ->where('governorates.is_active', true)
+            ->when($dateFrom, fn($q) => $q->whereDate('leads.created_at', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->whereDate('leads.created_at', '<=', $dateTo))
+            ->select('leads.id');
+
+        $employee->leads_total = (clone $leadBase)->count();
+
+        $employee->leads_waiting = Lead::where('moderator_id', $userId)
+            ->join('governorates', 'leads.governorate_id', '=', 'governorates.id')
+            ->when($dateFrom, fn($q) => $q->whereDate('leads.created_at', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->whereDate('leads.created_at', '<=', $dateTo))
+            ->where(function ($q) {
+                $q->where(function ($q2) {
+                    $q2->where('governorates.is_active', false)
+                        ->where(function ($q3) {
+                            $q3->whereNull('governorates.inactive_date')
+                                ->orWhereRaw('DATE(leads.created_at) >= DATE(governorates.inactive_date)');
+                        });
+                })
+                ->orWhereHas('location', function ($l) {
+                    $l->where('is_active', false);
+                });
+            })
+            ->select('leads.id')
+            ->count();
+
+        $employee->leads_total_all = $employee->leads_total + $employee->leads_waiting;
+        $employee->leads_new = $employee->leads_total_all;
+    });
 
     //return $employees;
     /* $employees = Employee::where('is_active', 1)->where('department_id', 6)

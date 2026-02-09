@@ -33,7 +33,7 @@
     </div>
 
     <h5 class="fw-bold mb-3 text-secondary">
-        <i class="bi bi-people"></i> المشرفون
+        <i class="bi bi-people"></i> الموديريتور
     </h5>
 
     <div class="row g-3">
@@ -48,13 +48,29 @@
                             {{ $employee->name }}
                         </h5>
 
-                        {{--  عدد المندوبين --}}
-                        <div class="d-flex justify-content-between align-items-center px-2 py-2 border rounded bg-light">
+                        {{--  عدد العملاء --}}
+                        <div class="d-flex justify-content-between align-items-center px-2 py-2 border rounded bg-light mb-2">
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-people-fill text-primary me-2 fs-5"></i>
-                                <span class="text-muted fw-semibold">عدد المندوبين</span>
+                                <span class="text-muted fw-semibold">إجمالي العملاء</span>
                             </div>
-                            <span class="fw-bold text-primary fs-5">{{ $employee->leads_count }}</span>
+                            <span class="fw-bold text-primary fs-5">{{ $employee->leads_total_all ?? 0 }}</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center px-2 py-2 border rounded bg-light mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-stars text-success me-2 fs-5"></i>
+                                <span class="text-muted fw-semibold">العملاء الجدد</span>
+                            </div>
+                            <span class="fw-bold text-success fs-5">{{ $employee->leads_new ?? 0 }}</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center px-2 py-2 border rounded bg-light">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-hourglass-split text-warning me-2 fs-5"></i>
+                                <span class="text-muted fw-semibold">قائمة الانتظار</span>
+                            </div>
+                            <span class="fw-bold text-warning fs-5">{{ $employee->leads_waiting ?? 0 }}</span>
                         </div>
 
                     </div>

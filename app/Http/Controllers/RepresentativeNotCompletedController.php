@@ -204,6 +204,15 @@ class RepresentativeNotCompletedController extends Controller
                 ->when($request->filled('employee_id'), fn($q) =>
                     $q->where('employee_id', $request->employee_id)
                 )
+                ->when($request->filled('code_status'), function ($q) use ($request) {
+                    if ($request->code_status === 'with') {
+                        $q->whereNotNull('code')->where('code', '!=', '');
+                    } elseif ($request->code_status === 'without') {
+                        $q->where(function ($qq) {
+                            $qq->whereNull('code')->orWhere('code', '');
+                        });
+                    }
+                })
                 ->when($request->filled('search'), function($q) use ($request){
                     $q->where(function($qq) use ($request){
                         $qq->where('name', 'like', "%{$request->search}%")

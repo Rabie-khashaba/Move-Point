@@ -31,7 +31,7 @@
                      <a href="{{ route('representatives-not-completed.export') }}" class="btn btn-success">
                         <i class="feather-download me-2"></i>تصدير Excel
                     </a>
-                    
+
                     @can('create_representatives_no')
                     <a href="{{ route('representatives-not-completed.create') }}" class="btn btn-primary">
                         <i class="feather-plus me-2"></i>
@@ -152,7 +152,7 @@
                         <label class="form-label">البحث</label>
                         <input type="text" name="search" class="form-control" placeholder="البحث في المندوبين..." value="{{ request('search') }}">
                     </div>
-                    
+
                     <div class="col-md-2">
                         <label class="form-label">من تاريخ</label>
                         <input type="date"
@@ -168,7 +168,7 @@
                                class="form-control {{ request('date_to') ? 'filter-active' : '' }}"
                                value="{{ request('date_to') }}">
                     </div>
-                    
+
                     <div class="col-md-2">
                         <label class="form-label">الشركة</label>
                         <select name="company_id" class="form-control">
@@ -180,7 +180,7 @@
                             @endforeach
                         </select>
                     </div>
-                    
+
                     <div class="col-md-2">
                         <label class="form-label">المستند الناقص</label>
                         <select name="missing_doc" class="form-control">
@@ -192,8 +192,8 @@
                             @endforeach
                         </select>
                     </div>
-                    
-                    
+
+
                     <div class="col-md-2">
                         <label class="form-label">الاوراق</label>
                         <select name="docs" class="form-control">
@@ -220,13 +220,21 @@
                             <option value="not_ready" {{ request('ready') === 'not_ready' ? 'selected' : '' }}> غير جاهز للعمل</option>
                         </select>
                     </div>
-                    
+
                     <div class="col-md-2">
                         <label class="form-label">استلام الاوراق</label>
                         <select name="document_received" class="form-control">
                             <option value="">جميع الحالات</option>
                             <option value="received" {{ request('document_received') === 'received' ? 'selected' : '' }}>تم الاستلام</option>
                             <option value="pending" {{ request('document_received') === 'pending' ? 'selected' : '' }}> لم  يتم  استلام الاوراق</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">كود المندوب</label>
+                        <select name="code_status" class="form-control">
+                            <option value="">جميع الحالات</option>
+                            <option value="with" {{ request('code_status') === 'with' ? 'selected' : '' }}>يمتلك كود</option>
+                            <option value="without" {{ request('code_status') === 'without' ? 'selected' : '' }}>لا يمتلك كود</option>
                         </select>
                     </div>
 
@@ -296,10 +304,11 @@
                                                             <a href="{{ route('representatives-not-completed.show', $representative->id) }}">
                                                                 {{ $representative->name }}
                                                             </a>
-                                                            
+
                                                         </h6>
 
-                                                        <small class="text-muted">رقم البطاقة: {{ $representative->national_id ?? 'غير محدد' }}</small>
+                                                        <small class="text-muted">رقم البطاقة: {{ $representative->national_id ?? 'غير محدد' }}</small> <br>
+                                                        <small class="text-muted"> الكود: {{ $representative->code ?? 'غير محدد' }}</small>
                                                         @if($representative->delivery_deposits_count == 7 && count($representative->missingDocs()) == 0 && $representative->is_training == 1)
                                                                 <p class="text-success ">جاهز للتحويل كمندوب فعلي</p>
                                                         @endif
@@ -386,8 +395,8 @@
                                                                 data-bs-target="#ReactiveModal">
                                                             <i class="feather-user-check"></i>
                                                         </button> --}}
-                                                        
-                                                        
+
+
                                                          <button type="button"
                                                                 class="btn btn-sm btn-success"
                                                                 title="تحويل لعميل فعلي"
@@ -424,7 +433,7 @@
                                                             </button>
                                                         </form>
                                                     @endcan
-                                                    
+
                                                     <form method="POST"
       action="{{ route('representatives.toggleDocumentsStatus', $representative->id) }}"
       class="d-inline">
@@ -591,7 +600,7 @@
                             </select>
                             <small class="text-muted">يمكن اختيار المحافظة فقط أو المحافظة والمنطقة معاً</small>
                         </div>
-                        
+
                         <div class="col-md-6 mb-3">
                             <label class="form-label">الشركه</label>
                             <select name="company_id" id="company_id" class="form-control" required>
@@ -659,7 +668,7 @@
                             </select>
                             <small class="text-muted">يمكن اختيار المحافظة فقط أو المحافظة والمنطقة معاً</small>
                         </div>
-                        
+
                         <div class="col-md-6 mb-3">
                             <label class="form-label">الشركه</label>
                             <select name="company_id" id="companyW_id" class="form-control" required>
@@ -669,7 +678,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        
+
                         <div class="col-md-6 mb-3">
                             <label class="form-label">تاريخ </label>
                             <input type="datetime-local" name="date" class="form-control" required>
@@ -721,9 +730,9 @@
                     <div class="mb-3">
     <label class="form-label">تاريخ التحويل</label>
     <input type="date" name="date" class="form-control" value="{{ now()->format('Y-m-d') }}" id="dateInput" required>
-    
+
     <!-- Hidden input to store the selected date -->
-    <input type="hidden" name="date" id="hiddenDate" value="{{ now()->format('Y-m-d') }}"> 
+    <input type="hidden" name="date" id="hiddenDate" value="{{ now()->format('Y-m-d') }}">
 </div>
                 </div>
                 <div class="modal-footer">
@@ -776,14 +785,14 @@
                             </select>
                             <small class="text-muted">يمكن اختيار المحافظة فقط أو المحافظة والمنطقة معاً</small>
                         </div>
-                        
+
                         <div class="col-md-6 mb-3">
                             <label class="form-label">الشركه</label>
                             <select name="company_id" id="companyT_id" class="form-control" required>
                                 <option value="">اختر الشركه</option>
                                 @foreach(\App\Models\Company::all() as $company)
                                     <option value="{{ $company->id }}">{{ $company->name }}</option>
-                                @endforeach 
+                                @endforeach
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
@@ -2022,7 +2031,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Get the elements
     const dateInput = document.getElementById('dateInput');
     const hiddenDateInput = document.getElementById('hiddenDate');
-    
+
     // Update the hidden input when the date changes
     dateInput.addEventListener('change', function() {
         hiddenDateInput.value = dateInput.value;

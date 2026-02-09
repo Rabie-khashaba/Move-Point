@@ -59,7 +59,7 @@ class LeadController extends Controller
             //            $interviewLeads = Lead::where('status', 'مقابلة')->count();
 
             // فلترة بالـ dates
-            $leadQuery = Lead::with(['governorate', 'location', 'source', 'employee.employee', 'representative', 'moderator', 'referredBy'])
+            $leadQuery = Lead::with(['governorate', 'location', 'source', 'employee.employee', 'representative', 'moderator', 'referredBy', 'lastFollowUp'])
                 ->join('governorates', 'leads.governorate_id', '=', 'governorates.id')
                 ->when($request->filled('assigned_to'), function ($query) use ($request) {
                     if ($request->assigned_to == 0) {
@@ -74,6 +74,21 @@ class LeadController extends Controller
                 })
                 ->when($request->filled('date_to'), function ($query) use ($request) {
                     return $query->whereDate('leads.created_at', '<=', $request->date_to);
+                })
+                ->when($request->filled('governorate_id'), function ($query) use ($request) {
+                    return $query->where('leads.governorate_id', $request->governorate_id);
+                })
+                ->when($request->filled('location_id'), function ($query) use ($request) {
+                    return $query->where('leads.location_id', $request->location_id);
+                })
+                ->when($request->filled('transportation'), function ($query) use ($request) {
+                    if ($request->transportation === '__none__') {
+                        return $query->where(function ($q) {
+                            $q->whereNull('leads.transportation')
+                                ->orWhere('leads.transportation', '');
+                        });
+                    }
+                    return $query->where('leads.transportation', $request->transportation);
                 })
                 ->where(function ($q) {
                     $q->where('governorates.is_active', true)
@@ -127,7 +142,10 @@ class LeadController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
 
-            return view('leads.index', compact('leads', 'totalLeads', 'newLeads', 'followUpLeads', 'notInterestedLeads', 'interviewLeads', 'negotiationLeads', 'closedLeads', 'lostLeads', 'oldLeads', 'notRespondedLeads', 'noTransportLeads', 'nightShiftLeads'));
+            $governorates = Governorate::orderBy('name')->get();
+            $locations = Location::orderBy('name')->get();
+
+            return view('leads.index', compact('leads', 'totalLeads', 'newLeads', 'followUpLeads', 'notInterestedLeads', 'interviewLeads', 'negotiationLeads', 'closedLeads', 'lostLeads', 'oldLeads', 'notRespondedLeads', 'noTransportLeads', 'nightShiftLeads', 'governorates', 'locations'));
         } catch (\Throwable $e) {
             Log::error('خطأ في LeadController@index: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()

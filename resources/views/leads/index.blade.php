@@ -373,7 +373,7 @@
 
     <!-- Filters Section -->
     <div class="filters-section">
-        @if(request('date_from') || request('date_to') || request('status') || request('search'))
+        @if(request('date_from') || request('date_to') || request('status') || request('search') || request('transportation') || request('governorate_id') || request('location_id'))
             <div class="filter-summary">
                 <strong>الفلاتر المطبقة:</strong>
                 @if(request('search'))
@@ -384,6 +384,21 @@
                 @endif
                 @if(request('status'))
                     <span class="badge">الحالة: {{ request('status') }}</span>
+                @endif
+                @if(request('transportation'))
+                    <span class="badge">وسيلة النقل: {{ request('transportation') === '__none__' ? 'بدون وسيلة نقل' : request('transportation') }}</span>
+                @endif
+                @if(request('governorate_id'))
+                    @php
+                        $govName = optional($governorates->firstWhere('id', (int) request('governorate_id')))->name;
+                    @endphp
+                    <span class="badge">المحافظة: {{ $govName ?? request('governorate_id') }}</span>
+                @endif
+                @if(request('location_id'))
+                    @php
+                        $locName = optional($locations->firstWhere('id', (int) request('location_id')))->name;
+                    @endphp
+                    <span class="badge">المنطقة: {{ $locName ?? request('location_id') }}</span>
                 @endif
             </div>
         @endif
@@ -413,6 +428,39 @@
                     <option value="قديم" {{ request('status') == 'قديم' ? 'selected' : '' }}>قديم</option>
                     <option value="شفت مسائي" {{ request('status') == 'شفت مسائي' ? 'selected' : '' }}>شفت مسائي</option>
                     <option value="بدون وسيلة نقل" {{ request('status') == 'بدون وسيلة نقل' ? 'selected' : '' }}>بدون وسيلة نقل</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">المحافظة</label>
+                <select class="form-control {{ request('governorate_id') ? 'filter-active' : '' }}" id="governorateFilter">
+                    <option value="">كل المحافظات</option>
+                    @foreach($governorates as $governorate)
+                        <option value="{{ $governorate->id }}" {{ request('governorate_id') == $governorate->id ? 'selected' : '' }}>
+                            {{ $governorate->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <!--<div class="col-md-2">-->
+            <!--    <label class="form-label">المنطقة</label>-->
+            <!--    <select class="form-control {{ request('location_id') ? 'filter-active' : '' }}" id="locationFilter">-->
+            <!--        <option value="">كل المناطق</option>-->
+            <!--        @foreach($locations as $location)-->
+            <!--            <option value="{{ $location->id }}" {{ request('location_id') == $location->id ? 'selected' : '' }}>-->
+            <!--                {{ $location->name }}-->
+            <!--            </option>-->
+            <!--        @endforeach-->
+            <!--    </select>-->
+            <!--</div>-->
+            <div class="col-md-2">
+                <label class="form-label">وسيلة النقل</label>
+                <select class="form-control {{ request('transportation') ? 'filter-active' : '' }}" id="transportationFilter">
+                    <option value="">كل الوسائل</option>
+                    <option value="عربية" {{ request('transportation') == 'عربية' ? 'selected' : '' }}>عربية</option>
+                    <option value="موتوسيكل" {{ request('transportation') == 'موتوسيكل' ? 'selected' : '' }}>موتوسيكل</option>
+                    <option value="دبابه مفتوحه" {{ request('transportation') == 'دبابه مفتوحه' ? 'selected' : '' }}>دبابه مفتوحه</option>
+                    <option value="دبابه مقفولة" {{ request('transportation') == 'دبابه مقفولة' ? 'selected' : '' }}>دبابه مقفولة</option>
+                    <option value="__none__" {{ request('transportation') == '__none__' ? 'selected' : '' }}>بدون وسيلة نقل</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -502,6 +550,8 @@
                                     <th>المحافظة</th>
                                     <th>الموظف المعين</th>
                                     <th>موديراتور ومعلن</th>
+                                    <th>وسيلة النقل</th>
+                                    <th>آخر متابعة</th>
                                     <th>التاريخ</th>
                                     <th>الحالة</th>
                                     <th class="text-end">الإجراءات</th>
@@ -561,6 +611,8 @@
                                                 {{ $lead->advertiser->name ?? '-' }}
                                             </div>
                                         </td>
+                                        <td>{{ $lead->transportation ?? '-' }}</td>
+                                        <td>{{ $lead->lastFollowUp?->notes ?? '-' }}</td>
                                         <td>{{ $lead->created_at->format('Y-m-d, h:iA') }}</td>
                                                                                  <td>
                                              @php
@@ -844,20 +896,22 @@
          .text-dark {
              color: #343a40 !important;
          }
-        /* Smaller fonts for: العميل (2), الموظف المعين (5), الإجراءات (8) */
+        /* Smaller fonts for: العميل (2), الموظف المعين (5), الموديراتور والمعلن (6), آخر متابعة (8), الإجراءات (11) */
         #leadList thead th:nth-child(2),
         #leadList thead th:nth-child(5),
         #leadList thead th:nth-child(6),
-        #leadList thead th:nth-child(9),
+        #leadList thead th:nth-child(8),
+        #leadList thead th:nth-child(11),
         #leadList tbody td:nth-child(2),
         #leadList tbody td:nth-child(5),
         #leadList tbody td:nth-child(6),
-        #leadList tbody td:nth-child(9) {
+        #leadList tbody td:nth-child(8),
+        #leadList tbody td:nth-child(11) {
             font-size: 0.85rem;
         }
         #leadList tbody td:nth-child(2) a,
-        #leadList tbody td:nth-child(9) a,
-        #leadList tbody td:nth-child(9) .badge {
+        #leadList tbody td:nth-child(11) a,
+        #leadList tbody td:nth-child(11) .badge {
             font-size: 0.8rem;
         }
     </style>
@@ -897,7 +951,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             // Apply default filters if no filters are currently applied
             const urlParams = new URLSearchParams(window.location.search);
-            if (!urlParams.has('status') && !urlParams.has('date_from') && !urlParams.has('date_to') && !urlParams.has('search')) {
+            if (!urlParams.has('status') && !urlParams.has('date_from') && !urlParams.has('date_to') && !urlParams.has('search') && !urlParams.has('transportation') && !urlParams.has('assigned_to') && !urlParams.has('governorate_id') && !urlParams.has('location_id')) {
                 // Apply default filters: status = 'جديد' and today's date
                 const today = new Date().toISOString().split('T')[0];
                 const url = new URL(window.location.href);
@@ -1061,6 +1115,10 @@
                 const dateFrom = document.getElementById('dateFrom').value;
                 const dateTo = document.getElementById('dateTo').value;
                 const status = document.getElementById('statusFilter').value;
+                const governorate_id = document.getElementById('governorateFilter').value;
+                const locationEl = document.getElementById('locationFilter');
+                const location_id = locationEl ? locationEl.value : '';
+                const transportation = document.getElementById('transportationFilter').value;
                 const assigned_to = document.getElementById('assignedToFilter').value;
 
                 const url = new URL(window.location.href);
@@ -1071,6 +1129,9 @@
                 url.searchParams.delete('date_to');
                 url.searchParams.delete('status');
                 url.searchParams.delete('assigned_to');
+                url.searchParams.delete('transportation');
+                url.searchParams.delete('governorate_id');
+                url.searchParams.delete('location_id');
 
                 // Add new filters
                 if (searchTerm) {
@@ -1085,6 +1146,15 @@
                 if (status) {
                     url.searchParams.set('status', status);
                 }
+                if (governorate_id) {
+                    url.searchParams.set('governorate_id', governorate_id);
+                }
+                if (location_id) {
+                    url.searchParams.set('location_id', location_id);
+                }
+                if (transportation) {
+                    url.searchParams.set('transportation', transportation);
+                }
                 if (assigned_to) {
                     url.searchParams.set('assigned_to', assigned_to);
                 }
@@ -1098,6 +1168,12 @@
                 document.getElementById('dateFrom').value = '';
                 document.getElementById('dateTo').value = '';
                 document.getElementById('statusFilter').value = '';
+                document.getElementById('governorateFilter').value = '';
+                const locationEl = document.getElementById('locationFilter');
+                if (locationEl) {
+                    locationEl.value = '';
+                }
+                document.getElementById('transportationFilter').value = '';
                 document.getElementById('assignedToFilter').value = '';
 
                 const url = new URL(window.location.href);
@@ -1105,6 +1181,9 @@
                 url.searchParams.delete('date_from');
                 url.searchParams.delete('date_to');
                 url.searchParams.delete('status');
+                url.searchParams.delete('transportation');
+                url.searchParams.delete('governorate_id');
+                url.searchParams.delete('location_id');
                 url.searchParams.delete('assigned_to');
 
                 window.location.href = url.toString();
@@ -1177,6 +1256,10 @@
                     const dateFrom = document.getElementById('dateFrom').value;
                     const dateTo = document.getElementById('dateTo').value;
                     const status = document.getElementById('statusFilter').value;
+                    const governorate_id = document.getElementById('governorateFilter').value;
+                    const locationEl = document.getElementById('locationFilter');
+                    const location_id = locationEl ? locationEl.value : '';
+                    const transportation = document.getElementById('transportationFilter').value;
                     const assigned_to = document.getElementById('assignedToFilter').value;
 
                     const url = new URL(window.location.href);
@@ -1187,6 +1270,9 @@
                     url.searchParams.delete('date_to');
                     url.searchParams.delete('status');
                     url.searchParams.delete('assigned_to');
+                    url.searchParams.delete('transportation');
+                    url.searchParams.delete('governorate_id');
+                    url.searchParams.delete('location_id');
                     url.searchParams.delete('page'); // Reset to first page
 
                     // Add new filters
@@ -1201,6 +1287,15 @@
                     }
                     if (status) {
                         url.searchParams.set('status', status);
+                    }
+                    if (governorate_id) {
+                        url.searchParams.set('governorate_id', governorate_id);
+                    }
+                    if (location_id) {
+                        url.searchParams.set('location_id', location_id);
+                    }
+                    if (transportation) {
+                        url.searchParams.set('transportation', transportation);
                     }
                     if (assigned_to) {
                         url.searchParams.set('assigned_to', assigned_to);

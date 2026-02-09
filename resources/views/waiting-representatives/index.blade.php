@@ -44,7 +44,7 @@
         <div id="collapseOne" class="accordion-collapse show  collapse page-header-collapse mb-4">
             <div class="accordion-body pb-2">
                 <div class="row">
-                    <div class="col-xxl-4 col-md-6 mb-3">
+                    <div class="col-xxl-2 col-md-4 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
@@ -62,7 +62,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-xxl-4 col-md-6 mb-3">
+                    <div class="col-xxl-2 col-md-4 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
@@ -80,7 +80,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-xxl-4 col-md-6 mb-3">
+                    <div class="col-xxl-2 col-md-4 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
@@ -92,6 +92,60 @@
                                             <span class="d-block">شركه بوسطه</span>
                                             <span class="fs-24 fw-bolder d-block"
                                                 id="qualifiedLeads">{{ $BoostaRepresentatives }}</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xxl-2 col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="avatar-text avatar-xl rounded bg-success">
+                                            <i class="feather-activity"></i>
+                                        </div>
+                                        <a href="javascript:void(0);" class="fw-bold d-block text-success">
+                                            <span class="d-block">مرضي</span>
+                                            <span class="fs-24 fw-bolder d-block">{{ $postponeReasonSick }}</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xxl-2 col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="avatar-text avatar-xl rounded bg-warning">
+                                            <i class="feather-alert-circle"></i>
+                                        </div>
+                                        <a href="javascript:void(0);" class="fw-bold d-block text-warning">
+                                            <span class="d-block">الـ zone مقفول</span>
+                                            <span class="fs-24 fw-bolder d-block">{{ $postponeReasonZoneClosed }}</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xxl-2 col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="avatar-text avatar-xl rounded bg-secondary">
+                                            <i class="feather-help-circle"></i>
+                                        </div>
+                                        <a href="javascript:void(0);" class="fw-bold d-block text-secondary">
+                                            <span class="d-block">اخري</span>
+                                            <span class="fs-24 fw-bolder d-block">{{ $postponeReasonOther }}</span>
                                         </a>
                                     </div>
                                 </div>
@@ -159,6 +213,26 @@
                                         {{ $governorate->name }}
                                     </option>
                                 @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">سبب التأجيل</label>
+                            <select name="postpone_reason" class="form-control">
+                                <option value="">جميع الأسباب</option>
+                                <option value="مرضي" {{ request('postpone_reason') == 'مرضي' ? 'selected' : '' }}>مرضي</option>
+                                <option value="الـ zone مقفول" {{ request('postpone_reason') == 'الـ zone مقفول' ? 'selected' : '' }}>الـ zone مقفول</option>
+                                <option value="اخرى" {{ request('postpone_reason') == 'اخرى' ? 'selected' : '' }}>اخرى</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">حالة المتابعة</label>
+                            <select name="followup_status" class="form-control">
+                                <option value="">جميع الحالات</option>
+                                <option value="لم يرد" {{ request('followup_status') == 'لم يرد' ? 'selected' : '' }}>لم يرد</option>
+                                <option value="متابعة مره اخري" {{ request('followup_status') == 'متابعة مره اخري' ? 'selected' : '' }}>متابعة مره اخري</option>
+                                <option value="تغيير الشركه" {{ request('followup_status') == 'تغيير الشركه' ? 'selected' : '' }}>تغيير الشركه</option>
                             </select>
                         </div>
 

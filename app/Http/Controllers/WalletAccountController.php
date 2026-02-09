@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\WalletAccountsExport;
 use App\Models\Representative;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class WalletAccountController extends Controller
 {
@@ -65,5 +67,12 @@ class WalletAccountController extends Controller
             'withWalletCount',
             'withoutWalletCount'
         ));
+    }
+
+    public function export(Request $request)
+    {
+        $fileName = 'wallet_accounts_' . now()->format('Y_m_d_His') . '.xlsx';
+
+        return Excel::download(new WalletAccountsExport($request->all()), $fileName);
     }
 }

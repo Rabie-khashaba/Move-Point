@@ -1444,7 +1444,6 @@
                                     <div><strong>تاريخ المتابعة:</strong> ${date}</div>
                                     <div><strong>الملاحظات:</strong> ${note}</div>
                                     <div><strong>أضيف بواسطة:</strong> ${createdBy || '-'}</div>
-                                    <div class="text-muted small">${createdAt}</div>
                                 </div>
                             `;
                         }).join('');

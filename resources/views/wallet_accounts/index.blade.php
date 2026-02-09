@@ -10,6 +10,11 @@
             <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">الرئيسية</a></li>
             <li class="breadcrumb-item">المحافظ الالكترونية</li>
         </ul>
+        <div class="d-flex gap-2">
+            <a href="{{ route('wallet-accounts.export', request()->query()) }}" class="btn btn-success">
+                <i class="feather-download me-1"></i>تصدير Excel
+            </a>
+        </div>
     </div>
     <!-- [ page-header ] end -->
 

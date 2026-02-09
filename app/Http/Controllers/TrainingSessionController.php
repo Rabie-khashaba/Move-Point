@@ -95,10 +95,9 @@ class TrainingSessionController extends Controller
 
         $sessionIds = $sessions->pluck('id');
         $latestPostponeReasons = TrainingSessionPostpone::whereIn('training_session_id', $sessionIds)
-            ->orderBy('created_at', 'desc')
             ->get(['training_session_id', 'reason'])
-            ->groupBy('training_session_id')
-            ->map(fn($items) => $items->first()?->reason)
+            ->keyBy('training_session_id')
+            ->map(fn($item) => $item?->reason)
             ->toArray();
 
         // IDs المندوبين الموجودين في الجلسات بعد الفلترة
@@ -312,13 +311,15 @@ class TrainingSessionController extends Controller
 
         $session = TrainingSession::with('representative')->findOrFail($id);
 
-        TrainingSessionPostpone::create([
-            'training_session_id' => $session->id,
-            'follow_up_date' => $request->follow_up_date,
-            'reason' => $request->reason,
-            'note' => $request->note,
-            'created_by' => auth()->id(),
-        ]);
+        TrainingSessionPostpone::updateOrCreate(
+            ['training_session_id' => $session->id],
+            [
+                'follow_up_date' => $request->follow_up_date,
+                'reason' => $request->reason,
+                'note' => $request->note,
+                'created_by' => auth()->id(),
+            ]
+        );
 
         WaitingRepresentative::updateOrCreate(
             ['representative_id' => $session->representative_id],

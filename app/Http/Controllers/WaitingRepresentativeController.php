@@ -71,6 +71,30 @@ class WaitingRepresentativeController extends Controller
                     $rep->where('location_id', request('location_id'));
                 });
             })
+            ->when(request('postpone_reason'), function ($q) {
+                $reason = request('postpone_reason');
+
+                $repIds = TrainingSessionPostpone::join('training_sessions', 'training_sessions.id', '=', 'training_session_postpones.training_session_id')
+                    ->where('training_session_postpones.reason', $reason)
+                    ->pluck('training_sessions.representative_id');
+
+                $q->whereIn('representative_id', $repIds);
+            })
+            ->when(request('followup_status'), function ($q) {
+                $status = request('followup_status');
+
+                $latestPerWaiting = WaitingRepresentativeFollowup::selectRaw('waiting_representative_id, MAX(created_at) as max_created')
+                    ->groupBy('waiting_representative_id');
+
+                $waitingIds = WaitingRepresentativeFollowup::joinSub($latestPerWaiting, 'latest', function ($join) {
+                    $join->on('waiting_representative_followups.waiting_representative_id', '=', 'latest.waiting_representative_id')
+                        ->on('waiting_representative_followups.created_at', '=', 'latest.max_created');
+                })
+                    ->where('waiting_representative_followups.status', $status)
+                    ->pluck('waiting_representative_followups.waiting_representative_id');
+
+                $q->whereIn('id', $waitingIds);
+            })
             ->orderBy('date', 'desc');
 
         // Pagination
@@ -92,12 +116,22 @@ class WaitingRepresentativeController extends Controller
             ->where('company_id', 10)
             ->count();
 
+        $postponeReasonCounts = TrainingSessionPostpone::join('training_sessions', 'training_sessions.id', '=', 'training_session_postpones.training_session_id')
+            ->whereIn('training_sessions.representative_id', $representativeIds)
+            ->whereIn('training_session_postpones.reason', ['مرضي', 'الـ zone مقفول', 'اخرى'])
+            ->selectRaw('training_session_postpones.reason, COUNT(DISTINCT training_sessions.representative_id) as total')
+            ->groupBy('training_session_postpones.reason')
+            ->pluck('total', 'reason');
+
+        $postponeReasonSick = (int) ($postponeReasonCounts['مرضي'] ?? 0);
+        $postponeReasonZoneClosed = (int) ($postponeReasonCounts['الـ zone مقفول'] ?? 0);
+        $postponeReasonOther = (int) ($postponeReasonCounts['اخرى'] ?? 0);
+
         $latestPostponeReasons = TrainingSessionPostpone::join('training_sessions', 'training_sessions.id', '=', 'training_session_postpones.training_session_id')
             ->whereIn('training_sessions.representative_id', $representativeIds)
-            ->orderBy('training_session_postpones.created_at', 'desc')
             ->get(['training_sessions.representative_id as representative_id', 'training_session_postpones.reason'])
-            ->groupBy('representative_id')
-            ->map(fn($items) => $items->first()?->reason)
+            ->keyBy('representative_id')
+            ->map(fn($item) => $item?->reason)
             ->toArray();
 
         $latestFollowupStatuses = WaitingRepresentativeFollowup::whereIn('waiting_representative_id', $waitings->pluck('id'))
@@ -112,6 +146,9 @@ class WaitingRepresentativeController extends Controller
             'totalRepresentatives',
             'NoonRepresentatives',
             'BoostaRepresentatives',
+            'postponeReasonSick',
+            'postponeReasonZoneClosed',
+            'postponeReasonOther',
             'latestPostponeReasons',
             'latestFollowupStatuses'
         ));

@@ -177,6 +177,15 @@
                         </select>
                     </div>
                     <div class="col-md-2">
+                        <label class="form-label">الاستعلام</label>
+                        <select name="inquiry_status" class="form-control">
+                            <option value="">جميع الحالات</option>
+                            <option value="none" {{ request('inquiry_status') === 'none' ? 'selected' : '' }}>لم يتم عمل استعلام</option>
+                            <option value="good" {{ request('inquiry_status') === 'good' ? 'selected' : '' }}>حسن السمعة</option>
+                            <option value="bad" {{ request('inquiry_status') === 'bad' ? 'selected' : '' }}>سيء السمعة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
                         <label class="form-label">كود المندوب</label>
                         <select name="code_status" class="form-control">
                             <option value="">جميع الحالات</option>

@@ -121,6 +121,38 @@ class RepresentativeController extends Controller
                     });
                 });
 
+        // --------------------------
+        //     Inquiry Filter
+        // --------------------------
+        if ($request->filled('inquiry_status')) {
+            if ($request->inquiry_status === 'none') {
+                $baseQuery->where(function ($q) {
+                    $q->whereDoesntHave('inquiry')
+                      ->orWhereHas('inquiry', function ($iq) {
+                          $iq->whereNull('inquiry_type');
+                      });
+                });
+            }
+
+            if ($request->inquiry_status === 'good') {
+                $baseQuery->whereHas('inquiry', function ($iq) {
+                    $iq->where(function ($qq) {
+                        $qq->where('inquiry_field_result', 'good')
+                           ->orWhere('inquiry_security_result', 'no_judgments');
+                    });
+                });
+            }
+
+            if ($request->inquiry_status === 'bad') {
+                $baseQuery->whereHas('inquiry', function ($iq) {
+                    $iq->where(function ($qq) {
+                        $qq->where('inquiry_field_result', 'bad')
+                           ->orWhere('inquiry_security_result', 'has_judgments');
+                    });
+                });
+            }
+        }
+
             // Pagination (main data)
             $representatives = (clone $baseQuery)
                 ->with(['company', 'user', 'supervisors', 'location', 'governorate'])

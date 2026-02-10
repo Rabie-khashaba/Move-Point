@@ -593,6 +593,10 @@ Route::get('advance-requests/{id}/receipt', [AdvanceRequestController::class, 's
             ->name('work_starts.startRealRepresentative');
         Route::post('work_starts/{id}/followup', [WorkStartController::class, 'followup'])
         ->name('work_starts.followup');
+        Route::post('work_starts/{id}/postpone', [WorkStartController::class, 'postpone'])
+        ->name('work_starts.postpone');
+        Route::get('work_starts/{id}/postpone-history', [WorkStartController::class, 'postponeHistory'])
+        ->name('work_starts.postpone-history');
         
 
          Route::get('/get-locations/{governorate_id}', function($governorate_id) {

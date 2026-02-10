@@ -283,9 +283,10 @@
                                                 <th>اسم المندوب</th>
                                                 <th>المحافظة</th>
                                                 <th>الشركة</th>
+                                                <th>المصدر</th>
                                                 <th>سبب التأجيل</th>
                                                 <th>الحالة</th>
-                                                <th>التاريخ</th>
+                                                <th>تاريخ آخر متابعة</th>
                                                 <th>الإجراءات</th>
                                             </tr>
                                         </thead>
@@ -321,12 +322,31 @@
                                                             class="badge bg-info">{{ $waiting->representative->company->name ?? 'غير محدد' }}</span>
                                                     </td>
                                                     <td>
+                                                        @if($waiting->source === 'training')
+                                                            محاضرات التدريب
+                                                        @elseif($waiting->source === 'work_start')
+                                                            بدء العمل
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
+                                                    <td>
                                                         {{ $latestPostponeReasons[$waiting->representative_id] ?? '-' }}
                                                     </td>
                                                     <td>
                                                         {{ $latestFollowupStatuses[$waiting->id] ?? '-' }}
                                                     </td>
-                                                    <td>{{ \Carbon\Carbon::parse($waiting->date)->format('d/m/Y') }}</td>
+                                                    @php($lastFollowupDate = $latestFollowupDates[$waiting->id] ?? null)
+                                                    @php($lastPostponeDate = $latestPostponeDates[$waiting->representative_id] ?? $waiting->date)
+                                                    <td>
+                                                        @if($lastFollowupDate)
+                                                            {{ \Carbon\Carbon::parse($lastFollowupDate)->format('d/m/Y') }}
+                                                        @elseif($lastPostponeDate)
+                                                            {{ \Carbon\Carbon::parse($lastPostponeDate)->format('d/m/Y') }}
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
 
                                                     <td class="d-flex flex-wrap gap-2">
                                                         <button type="button" class="btn btn-sm btn-info" title="رسالة بدء العمل"
@@ -525,7 +545,7 @@
                         </select>
 
                         <label class="mt-3 fw-bold">تاريخ المتابعة</label>
-                        <input type="date" name="follow_up_date" class="form-control">
+                        <input type="date" name="follow_up_date" class="form-control" required>
 
                         <label class="mt-3 fw-bold">ملاحظات</label>
                         <textarea name="note" class="form-control" rows="4" required

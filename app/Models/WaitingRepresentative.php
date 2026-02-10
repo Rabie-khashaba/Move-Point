@@ -10,6 +10,7 @@ class WaitingRepresentative extends Model
         'representative_id',
         'date',
         'status',
+        'source',
     ];
 
     protected $casts = [

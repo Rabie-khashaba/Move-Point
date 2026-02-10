@@ -637,7 +637,7 @@
                         </select>
 
                         <label class="mt-3 fw-bold">تاريخ المتابعة</label>
-                        <input type="date" name="follow_up_date" class="form-control">
+                        <input type="date" name="follow_up_date" class="form-control" required>
 
                         <label class="mt-3 fw-bold">ملاحظات</label>
                         <textarea name="note" class="form-control" rows="4" required

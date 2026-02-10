@@ -43,8 +43,8 @@
 
         <div id="collapseOne" class="accordion-collapse show  collapse page-header-collapse mb-4">
             <div class="accordion-body pb-2">
-                <div class="row">
-                    <div class="col-xxl-4 col-md-6 mb-3">
+                <div class="row flex-nowrap overflow-auto">
+                    <div class="col-3 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
@@ -62,44 +62,106 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-xxl-4 col-md-6 mb-3">
+                    @php
+                        $companyCardStyles = [
+                            ['bg' => 'bg-primary', 'icon' => 'feather-user-check', 'text' => 'text-blue'],
+                            ['bg' => 'bg-info', 'icon' => 'feather-user-plus', 'text' => 'text-black'],
+                            ['bg' => 'bg-success', 'icon' => 'feather-briefcase', 'text' => 'text-success'],
+                            ['bg' => 'bg-warning', 'icon' => 'feather-award', 'text' => 'text-warning'],
+                            ['bg' => 'bg-secondary', 'icon' => 'feather-users', 'text' => 'text-secondary'],
+                            ['bg' => 'bg-danger', 'icon' => 'feather-alert-circle', 'text' => 'text-danger'],
+                        ];
+                    @endphp
+                    @foreach($companies as $index => $company)
+                        @php($style = $companyCardStyles[$index % count($companyCardStyles)])
+                        <div class="col-3 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="avatar-text avatar-xl rounded {{ $style['bg'] }}">
+                                                <i class="{{ $style['icon'] }}"></i>
+                                            </div>
+                                            <a href="javascript:void(0);" class="fw-bold d-block {{ $style['text'] }}">
+                                                <span class="d-block">{{ $company->name }}</span>
+                                                <span class="fs-24 fw-bolder d-block">
+                                                    {{ $companyCounts[$company->id] ?? 0 }}
+                                                </span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                    {{-- <div class="col-xxl-2 col-xl-2 col-lg-2 col-md-2 col-sm-6 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center gap-3">
-                                        <div class="avatar-text avatar-xl rounded bg-primary">
-                                            <i class="feather-user-check"></i>
+                                        <div class="avatar-text avatar-xl rounded bg-danger">
+                                            <i class="feather-user-x"></i>
                                         </div>
-                                        <a href="javascript:void(0);" class="fw-bold d-block text-blue">
-                                            <span class="d-block">شركه نون</span>
-                                            <span class="fs-24 fw-bolder d-block"
-                                                id="activeLeads">{{ $NoonRepresentatives }}</span>
+                                        <a href="javascript:void(0);" class="fw-bold d-block text-danger">
+                                            <span class="d-block">المستقيلين</span>
+                                            <span class="fs-24 fw-bolder d-block">{{ $resignedCount ?? 0 }}</span>
                                         </a>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-xxl-4 col-md-6 mb-3">
+                    <div class="col-xxl-2 col-xl-2 col-lg-2 col-md-2 col-sm-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="avatar-text avatar-xl rounded bg-warning">
+                                            <i class="feather-alert-triangle"></i>
+                                        </div>
+                                        <a href="javascript:void(0);" class="fw-bold d-block text-warning">
+                                            <span class="d-block">سبب: مرضي</span>
+                                            <span class="fs-24 fw-bolder d-block">{{ $postponeReasonCounts['مرضي'] ?? 0 }}</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xxl-2 col-xl-2 col-lg-2 col-md-2 col-sm-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="avatar-text avatar-xl rounded bg-secondary">
+                                            <i class="feather-lock"></i>
+                                        </div>
+                                        <a href="javascript:void(0);" class="fw-bold d-block text-secondary">
+                                            <span class="d-block">سبب: الـ zone مقفول</span>
+                                            <span class="fs-24 fw-bolder d-block">{{ $postponeReasonCounts['الـ zone مقفول'] ?? 0 }}</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xxl-2 col-xl-2 col-lg-2 col-md-2 col-sm-6 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center gap-3">
                                         <div class="avatar-text avatar-xl rounded bg-info">
-                                            <i class="feather-user-plus"></i>
+                                            <i class="feather-info"></i>
                                         </div>
-                                        <a href="javascript:void(0);" class="fw-bold d-block text-black">
-                                            <span class="d-block">شركه بوسته</span>
-                                            <span class="fs-24 fw-bolder d-block"
-                                                id="qualifiedLeads">{{ $BoostaRepresentatives }}</span>
+                                        <a href="javascript:void(0);" class="fw-bold d-block text-info">
+                                            <span class="d-block">سبب: اخرى</span>
+                                            <span class="fs-24 fw-bolder d-block">{{ $postponeReasonCounts['اخرى'] ?? 0 }}</span>
                                         </a>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-
+                    </div>  --}}
                 </div>
             </div>
         </div>
@@ -109,7 +171,7 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <form method="GET" action="{{ route('work_starts.index') }}" class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">البحث</label>
                             <input type="text" name="search" class="form-control" placeholder="البحث في المندوبين..."
                                 value="{{ request('search') }}">
@@ -149,6 +211,23 @@
                                 @endforeach
                             </select>
                         </div>
+                        {{-- <div class="col-md-2">
+                            <label class="form-label">المستقيلين</label>
+                            <select name="resigned_status" class="form-control">
+                                <option value="">الكل</option>
+                                <option value="resigned" {{ request('resigned_status') == 'resigned' ? 'selected' : '' }}>مستقيل</option>
+                                <option value="not_resigned" {{ request('resigned_status') == 'not_resigned' ? 'selected' : '' }}>غير مستقيل</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">سبب التأجيل</label>
+                            <select name="postpone_reason" class="form-control">
+                                <option value="">كل الأسباب</option>
+                                <option value="مرضي" {{ request('postpone_reason') == 'مرضي' ? 'selected' : '' }}>مرضي</option>
+                                <option value="الـ zone مقفول" {{ request('postpone_reason') == 'الـ zone مقفول' ? 'selected' : '' }}>الـ zone مقفول</option>
+                                <option value="اخرى" {{ request('postpone_reason') == 'اخرى' ? 'selected' : '' }}>اخرى</option>
+                            </select>
+                        </div> --}}
 
 
 
@@ -188,6 +267,7 @@
                                                 <th>الشركة</th>
                                                 <th>الاوراق الناقصه</th>
                                                 <th>التاريخ</th>
+                                                <th>سبب التأجيل</th>
                                                 <th>الإجراءات</th>
                                             </tr>
                                         </thead>
@@ -238,6 +318,9 @@
                                                     </td>
                                                     <td>
                                                         {{ $workStart->date }}
+                                                    </td>
+                                                    <td>
+                                                        {{ $latestPostponeReasonsByWorkStart[$workStart->id] ?? '---' }}
                                                     </td>
                                                     <td class="d-flex gap-2">
 
@@ -315,6 +398,13 @@
                                                             data-id="{{ $workStart->representative_id}}">
                                                             <!--<i class="feather-clock"></i>-->
                                                             تعديل تاريخ  ببدء العمل
+                                                        </button>
+                                                        <button type="button"
+                                                            class="btn btn-sm btn-outline-success uniform-btn openPostponeModal"
+                                                            data-id="{{ $workStart->representative_id }}"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#postponeModal">
+                                                            تأجيل
                                                         </button>
                                                     </td>
 
@@ -459,6 +549,53 @@
         </div>
     </div>
 
+    <!-- Postpone Modal -->
+    <div class="modal fade" id="postponeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="POST" id="postponeForm">
+                @csrf
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">تأجيل</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div id="postponeHistory" class="mb-3 d-none">
+                            <label class="form-label">سجل التأجيلات</label>
+                            <div class="border rounded p-2 bg-light" id="postponeHistoryList"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">السبب</label>
+                            <select name="reason" class="form-control" required>
+                                <option value="">اختر السبب</option>
+                                <option value="مرضي">مرضي</option>
+                                <option value="الـ zone مقفول">الـ zone مقفول</option>
+                                <option value="اخرى">اخرى</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">تاريخ المتابعة (اختياري)</label>
+                            <input type="date" name="follow_up_date" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">ملاحظات</label>
+                            <textarea name="note" class="form-control" rows="3" required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-success">حفظ</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
 @endsection
 
 @push('scripts')
@@ -471,6 +608,40 @@
         });
 
         $(document).ready(function () {
+            document.querySelectorAll('.openPostponeModal').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = this.dataset.id;
+                    const form = document.getElementById('postponeForm');
+                    form.action = "{{ route('work_starts.postpone', ':id') }}".replace(':id', id);
+
+                    const historyWrapper = document.getElementById('postponeHistory');
+                    const historyList = document.getElementById('postponeHistoryList');
+
+                    historyWrapper.classList.add('d-none');
+                    historyList.innerHTML = '';
+
+                    fetch("{{ route('work_starts.postpone-history', ':id') }}".replace(':id', id))
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success && data.items && data.items.length) {
+                                historyWrapper.classList.remove('d-none');
+                                data.items.forEach(item => {
+                                    const date = item.follow_up_date ? new Date(item.follow_up_date).toLocaleDateString('ar-EG') : '-';
+                                    const createdBy = item.created_by_name ? ` - ${item.created_by_name}` : '';
+                                    historyList.innerHTML += `
+                                        <div class="mb-2 p-2 border rounded bg-white">
+                                            <div><strong>السبب:</strong> ${item.reason}</div>
+                                            <div><strong>المتابعة:</strong> ${date}</div>
+                                            <div><strong>ملاحظات:</strong> ${item.note}</div>
+                                            <small class="text-muted">${new Date(item.created_at).toLocaleString('ar-EG')}${createdBy}</small>
+                                        </div>
+                                    `;
+                                });
+                            }
+                        });
+                });
+            });
+
             // Handle modal data
             $('#transferModal').on('show.bs.modal', function (event) {
                 var button = $(event.relatedTarget);

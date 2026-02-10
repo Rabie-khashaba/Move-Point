@@ -3,7 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\WorkStart;
+use App\Models\TrainingSession;
+use App\Models\TrainingSessionPostpone;
+use App\Models\WaitingRepresentative;
 use App\Models\Representative;
+use App\Models\Company;
 use App\Models\Message;
 use App\Models\Governorate;
 use App\Models\Location;
@@ -55,14 +59,46 @@ class WorkStartController extends Controller
                 request('status'),
                 fn($q) => $q->where('status', request('status'))
             )
+            ->when(
+                request('postpone_reason'),
+                function ($q) {
+                    $reason = request('postpone_reason');
+                    $q->whereExists(function ($sub) use ($reason) {
+                        $sub->select(DB::raw(1))
+                            ->from('training_session_postpones')
+                            ->whereColumn('training_session_postpones.work_start_id', 'work_starts.id')
+                            ->where('training_session_postpones.reason', $reason);
+                    });
+                }
+            )
+            ->when(
+                request('resigned_status'),
+                function ($q) {
+                    $status = request('resigned_status');
+                    if ($status === 'resigned') {
+                        $q->whereHas('representative', function ($rep) {
+                            $rep->where('is_active', 0);
+                        });
+                    } elseif ($status === 'not_resigned') {
+                        $q->whereHas('representative', function ($rep) {
+                            $rep->where('is_active', 1);
+                        });
+                    }
+                }
+            )
             ->orderBy('date', 'desc');
 
         // Pagination
+        $statsQuery = clone $workStartQuery;
         $workStarts = $workStartQuery->paginate(20)->appends(request()->query());
 
         // IDs المندوبين الموجودين في الجلسات بعد الفلترة
-        $representativeIds = (clone $workStartQuery)
+        $representativeIds = (clone $statsQuery)
             ->pluck('representative_id')
+            ->unique();
+
+        $workStartIds = (clone $statsQuery)
+            ->pluck('id')
             ->unique();
 
         // الإحصائيات (تعمل بناءً على الفلترة)
@@ -76,8 +112,39 @@ class WorkStartController extends Controller
             ->where('company_id', 10)
             ->count();
 
+        $resignedCount = \App\Models\Representative::whereIn('id', $representativeIds)
+            ->where('is_active', 0)
+            ->count();
 
-        return view('work_starts.index', compact('workStarts', 'totalRepresentatives', 'NoonRepresentatives', 'BoostaRepresentatives'));
+        $companies = Company::orderBy('name')->get();
+        $companyCounts = Representative::whereIn('id', $representativeIds)
+            ->select('company_id', DB::raw('count(*) as total'))
+            ->groupBy('company_id')
+            ->pluck('total', 'company_id')
+            ->toArray();
+
+        $postponeReasonCounts = TrainingSessionPostpone::whereIn('work_start_id', $workStartIds)
+            ->select('reason', DB::raw('count(*) as total'))
+            ->groupBy('reason')
+            ->pluck('total', 'reason');
+
+        $latestPostponeReasonsByWorkStart = TrainingSessionPostpone::whereIn('work_start_id', $workStartIds)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'work_start_id', 'reason'])
+            ->unique('work_start_id')
+            ->pluck('reason', 'work_start_id');
+
+        return view('work_starts.index', compact(
+            'workStarts',
+            'totalRepresentatives',
+            'NoonRepresentatives',
+            'BoostaRepresentatives',
+            'resignedCount',
+            'companies',
+            'companyCounts',
+            'postponeReasonCounts',
+            'latestPostponeReasonsByWorkStart'
+        ));
     }
 
 
@@ -201,6 +268,70 @@ class WorkStartController extends Controller
         }
 
 
+    }
+
+    public function postpone(Request $request, $id)
+    {
+        $request->validate([
+            'reason' => 'required|string|in:مرضي,الـ zone مقفول,اخرى',
+            'follow_up_date' => 'required|date',
+            'note' => 'required|string',
+        ]);
+
+        $workStart = WorkStart::where('representative_id', $id)->latest('id')->first();
+        if (!$workStart) {
+            return redirect()->back()->with('error', 'لا توجد بيانات بدء عمل مرتبطة بهذا المندوب.');
+        }
+
+        TrainingSessionPostpone::updateOrCreate(
+            ['work_start_id' => $workStart->id],
+            [
+                'training_session_id' => null,
+                'follow_up_date' => $request->follow_up_date,
+                'reason' => $request->reason,
+                'note' => $request->note,
+                'created_by' => auth()->id(),
+            ]
+        );
+
+        WaitingRepresentative::updateOrCreate(
+            ['representative_id' => $workStart->representative_id],
+            [
+                'date' => $request->follow_up_date ?? now(),
+                'status' => 0,
+                'source' => 'work_start',
+            ]
+        );
+
+        return redirect()->route('work_starts.index')->with('success', 'تم تأجيل الجلسة وإضافة المندوب لقائمة المنتظرين.');
+    }
+
+    public function postponeHistory($id)
+    {
+        $workStart = WorkStart::where('representative_id', $id)->latest('id')->first();
+        if (!$workStart) {
+            return response()->json(['success' => false, 'items' => []]);
+        }
+
+        $items = TrainingSessionPostpone::where('work_start_id', $workStart->id)
+            ->orderBy('created_at', 'desc')
+            ->with('createdBy:id,name')
+            ->get(['id', 'reason', 'follow_up_date', 'note', 'created_at', 'created_by'])
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'reason' => $item->reason,
+                    'follow_up_date' => $item->follow_up_date,
+                    'note' => $item->note,
+                    'created_at' => $item->created_at,
+                    'created_by_name' => optional($item->createdBy)->name,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'items' => $items,
+        ]);
     }
 
 

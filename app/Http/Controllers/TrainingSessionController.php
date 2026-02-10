@@ -293,6 +293,7 @@ class TrainingSessionController extends Controller
             [
                 'date' => now(),
                 'status' => 0,
+                'source' => 'training',
             ]
         );
 
@@ -305,7 +306,7 @@ class TrainingSessionController extends Controller
     {
         $request->validate([
             'reason' => 'required|string|in:مرضي,الـ zone مقفول,اخرى',
-            'follow_up_date' => 'nullable|date',
+            'follow_up_date' => 'required|date',
             'note' => 'required|string',
         ]);
 
@@ -314,6 +315,7 @@ class TrainingSessionController extends Controller
         TrainingSessionPostpone::updateOrCreate(
             ['training_session_id' => $session->id],
             [
+                'work_start_id' => null,
                 'follow_up_date' => $request->follow_up_date,
                 'reason' => $request->reason,
                 'note' => $request->note,
@@ -326,6 +328,7 @@ class TrainingSessionController extends Controller
             [
                 'date' => $request->follow_up_date ?? now(),
                 'status' => 0,
+                'source' => 'training',
             ]
         );
 
@@ -359,3 +362,4 @@ class TrainingSessionController extends Controller
 
 
 }
+

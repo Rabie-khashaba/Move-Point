@@ -10,6 +10,7 @@ use App\Models\WaitingRepresentativeFollowup;
 use App\Models\TrainingSessionPostpone;
 use Illuminate\Http\Request;
 use App\Services\WhatsAppWorkService;
+use Illuminate\Support\Facades\DB;
 
 class WaitingRepresentativeController extends Controller
 {
@@ -74,9 +75,12 @@ class WaitingRepresentativeController extends Controller
             ->when(request('postpone_reason'), function ($q) {
                 $reason = request('postpone_reason');
 
-                $repIds = TrainingSessionPostpone::join('training_sessions', 'training_sessions.id', '=', 'training_session_postpones.training_session_id')
+                $repIds = TrainingSessionPostpone::query()
+                    ->leftJoin('training_sessions', 'training_sessions.id', '=', 'training_session_postpones.training_session_id')
+                    ->leftJoin('work_starts', 'work_starts.id', '=', 'training_session_postpones.work_start_id')
                     ->where('training_session_postpones.reason', $reason)
-                    ->pluck('training_sessions.representative_id');
+                    ->selectRaw('COALESCE(training_sessions.representative_id, work_starts.representative_id) as representative_id')
+                    ->pluck('representative_id');
 
                 $q->whereIn('representative_id', $repIds);
             })
@@ -116,10 +120,12 @@ class WaitingRepresentativeController extends Controller
             ->where('company_id', 10)
             ->count();
 
-        $postponeReasonCounts = TrainingSessionPostpone::join('training_sessions', 'training_sessions.id', '=', 'training_session_postpones.training_session_id')
-            ->whereIn('training_sessions.representative_id', $representativeIds)
+        $postponeReasonCounts = TrainingSessionPostpone::query()
+            ->leftJoin('training_sessions', 'training_sessions.id', '=', 'training_session_postpones.training_session_id')
+            ->leftJoin('work_starts', 'work_starts.id', '=', 'training_session_postpones.work_start_id')
+            ->whereIn(DB::raw('COALESCE(training_sessions.representative_id, work_starts.representative_id)'), $representativeIds)
             ->whereIn('training_session_postpones.reason', ['مرضي', 'الـ zone مقفول', 'اخرى'])
-            ->selectRaw('training_session_postpones.reason, COUNT(DISTINCT training_sessions.representative_id) as total')
+            ->selectRaw('training_session_postpones.reason, COUNT(DISTINCT COALESCE(training_sessions.representative_id, work_starts.representative_id)) as total')
             ->groupBy('training_session_postpones.reason')
             ->pluck('total', 'reason');
 
@@ -127,18 +133,40 @@ class WaitingRepresentativeController extends Controller
         $postponeReasonZoneClosed = (int) ($postponeReasonCounts['الـ zone مقفول'] ?? 0);
         $postponeReasonOther = (int) ($postponeReasonCounts['اخرى'] ?? 0);
 
-        $latestPostponeReasons = TrainingSessionPostpone::join('training_sessions', 'training_sessions.id', '=', 'training_session_postpones.training_session_id')
-            ->whereIn('training_sessions.representative_id', $representativeIds)
-            ->get(['training_sessions.representative_id as representative_id', 'training_session_postpones.reason'])
-            ->keyBy('representative_id')
-            ->map(fn($item) => $item?->reason)
-            ->toArray();
+        $latestPostponeReasons = [];
+        $latestPostponeDates = [];
+        $latestPostponeRows = TrainingSessionPostpone::query()
+            ->leftJoin('training_sessions', 'training_sessions.id', '=', 'training_session_postpones.training_session_id')
+            ->leftJoin('work_starts', 'work_starts.id', '=', 'training_session_postpones.work_start_id')
+            ->whereIn(DB::raw('COALESCE(training_sessions.representative_id, work_starts.representative_id)'), $representativeIds)
+            ->orderBy('training_session_postpones.created_at', 'desc')
+            ->get([
+                DB::raw('COALESCE(training_sessions.representative_id, work_starts.representative_id) as representative_id'),
+                'training_session_postpones.reason',
+                'training_session_postpones.follow_up_date',
+            ]);
+
+        foreach ($latestPostponeRows as $row) {
+            if (!isset($latestPostponeReasons[$row->representative_id])) {
+                $latestPostponeReasons[$row->representative_id] = $row->reason;
+            }
+            if (!isset($latestPostponeDates[$row->representative_id])) {
+                $latestPostponeDates[$row->representative_id] = $row->follow_up_date;
+            }
+        }
 
         $latestFollowupStatuses = WaitingRepresentativeFollowup::whereIn('waiting_representative_id', $waitings->pluck('id'))
             ->orderBy('created_at', 'desc')
             ->get(['waiting_representative_id', 'status'])
             ->groupBy('waiting_representative_id')
             ->map(fn($items) => $items->first()?->status)
+            ->toArray();
+
+        $latestFollowupDates = WaitingRepresentativeFollowup::whereIn('waiting_representative_id', $waitings->pluck('id'))
+            ->orderBy('created_at', 'desc')
+            ->get(['waiting_representative_id', 'follow_up_date'])
+            ->groupBy('waiting_representative_id')
+            ->map(fn($items) => $items->first()?->follow_up_date)
             ->toArray();
 
         return view('waiting-representatives.index', compact(
@@ -150,7 +178,9 @@ class WaitingRepresentativeController extends Controller
             'postponeReasonZoneClosed',
             'postponeReasonOther',
             'latestPostponeReasons',
-            'latestFollowupStatuses'
+            'latestFollowupStatuses',
+            'latestFollowupDates',
+            'latestPostponeDates'
         ));
     }
 
@@ -158,7 +188,7 @@ class WaitingRepresentativeController extends Controller
     {
         $request->validate([
             'status' => 'required|string|in:لم يرد,متابعة مره اخري,تغيير الشركه',
-            'follow_up_date' => 'nullable|date',
+            'follow_up_date' => 'required|date',
             'note' => 'required|string',
         ]);
 

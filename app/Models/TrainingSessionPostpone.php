@@ -8,6 +8,7 @@ class TrainingSessionPostpone extends Model
 {
     protected $fillable = [
         'training_session_id',
+        'work_start_id',
         'follow_up_date',
         'reason',
         'note',
@@ -21,6 +22,11 @@ class TrainingSessionPostpone extends Model
     public function trainingSession()
     {
         return $this->belongsTo(TrainingSession::class);
+    }
+
+    public function workStart()
+    {
+        return $this->belongsTo(WorkStart::class);
     }
 
     public function createdBy()

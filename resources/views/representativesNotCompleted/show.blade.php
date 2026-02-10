@@ -73,6 +73,22 @@
                             <h5 class="card-title mb-0">تفاصيل المندوب</h5>
                         </div>
                         <div class="card-body">
+                            @php
+                                $inquiry = $representative->inquiry;
+                                $inquiryType = $inquiry->inquiry_type ?? $representative->inquiry_type;
+                                $inquiryFieldResult = $inquiry->inquiry_field_result ?? $representative->inquiry_field_result;
+                                $inquiryFieldNotes = $inquiry->inquiry_field_notes ?? $representative->inquiry_field_notes;
+                                $inquirySecurityResult = $inquiry->inquiry_security_result ?? $representative->inquiry_security_result;
+                                $inquirySecurityNotes = $inquiry->inquiry_security_notes ?? $representative->inquiry_security_notes;
+                                $fieldInquiryAttachments = $inquiry->inquiry_field_attachments ?? $representative->inquiry_field_attachments ?? [];
+                                $securityInquiryAttachments = $inquiry->inquiry_security_attachments ?? $representative->inquiry_security_attachments ?? [];
+                            @endphp
+
+                            @if($inquirySecurityResult === 'has_judgments')
+                                <div class="alert alert-danger">
+                                    الحساب غير نشط لأسباب أمنية
+                                </div>
+                            @endif
                             <div class="row">
                                 <!-- الاسم -->
                                 <div class="col-md-6 mb-3">
@@ -153,31 +169,71 @@
                                 </div>
 
                                 <!-- الاستعلام -->
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-12 mb-3">
                                     <label class="fw-bold">الاستعلام:</label>
                                     <div>
-                                        <span
-                                            class="badge bg-{{ $representative->inquiry_checkbox ? 'success' : 'secondary' }}">
-                                            {{ $representative->inquiry_checkbox ? 'نعم' : 'لا' }}
-                                        </span>
-                                        @if($representative->inquiry_checkbox)
-                                            <small class="text-muted d-block mt-1">المندوب يحتاج إلى استعلام أو معلومات
-                                                إضافية</small>
+                                        @if($inquiryType === 'field')
+                                            <span class="badge bg-primary">ميداني</span>
+                                        @elseif($inquiryType === 'security')
+                                            <span class="badge bg-danger">أمني</span>
+                                        @else
+                                            <span class="badge bg-secondary">لا يوجد</span>
                                         @endif
                                     </div>
                                 </div>
 
-                                <!-- بيانات الاستعلام -->
-                                <div class="col-md-6 mb-3">
-                                    <label class="fw-bold">بيانات الاستعلام:</label>
-                                    @if($representative->inquiry_data)
-                                        <div class="mt-2">
-                                            <span>{{ $representative->inquiry_data }}</span>
+                                @if($inquiryType === 'field')
+                                    <div class="col-md-6 mb-3">
+                                        <label class="fw-bold">نتيجة الاستعلام الميداني:</label>
+                                        <span>{{ $inquiryFieldResult === 'good' ? 'حسن السمعه' : ($inquiryFieldResult === 'bad' ? 'سيء السمعه' : 'غير محدد') }}</span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="fw-bold">ملاحظات الاستعلام الميداني:</label>
+                                        <span>{{ $inquiryFieldNotes ?: 'غير محدد' }}</span>
+                                    </div>
+                                @endif
+
+                                @if($inquiryType === 'security')
+                                    <div class="col-md-6 mb-3">
+                                        <label class="fw-bold">نتيجة الاستعلام الأمني:</label>
+                                        <span>{{ $inquirySecurityResult === 'has_judgments' ? 'عليه أحكام' : ($inquirySecurityResult === 'no_judgments' ? 'ليس عليه أحكام' : 'غير محدد') }}</span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="fw-bold">ملاحظات الاستعلام الأمني:</label>
+                                        <span>{{ $inquirySecurityNotes ?: 'غير محدد' }}</span>
+                                    </div>
+                                @endif
+
+                                @if($inquiryType === 'field' && count($fieldInquiryAttachments) > 0)
+                                    <div class="col-md-12 mb-3">
+                                        <label class="fw-bold">مرفقات الاستعلام الميداني:</label>
+                                        <div class="mt-2 d-flex flex-wrap gap-2">
+                                            @foreach($fieldInquiryAttachments as $attachment)
+                                                @php
+                                                    $path = $attachment['path'] ?? null;
+                                                @endphp
+                                                @if($path)
+                                                    <a href="{{ asset('storage/app/public/' . str_replace(['\\', '//'], ['/', '/'], $path)) }}" target="_blank" class="btn btn-sm btn-outline-primary">عرض</a>
+                                                @endif
+                                            @endforeach
                                         </div>
-                                    @else
-                                        <span class="text-muted">غير محدد</span>
-                                    @endif
-                                </div>
+                                    </div>
+                                @endif
+                                @if($inquiryType === 'security' && count($securityInquiryAttachments) > 0)
+                                    <div class="col-md-12 mb-3">
+                                        <label class="fw-bold">مرفقات الاستعلام الأمني:</label>
+                                        <div class="mt-2 d-flex flex-wrap gap-2">
+                                            @foreach($securityInquiryAttachments as $attachment)
+                                                @php
+                                                    $path = $attachment['path'] ?? null;
+                                                @endphp
+                                                @if($path)
+                                                    <a href="{{ asset('storage/app/public/' . str_replace(['\\', '//'], ['/', '/'], $path)) }}" target="_blank" class="btn btn-sm btn-outline-danger">عرض</a>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
 
                                 <!-- بيانات الاستعلام -->
                                 <div class="col-md-6 mb-3">
@@ -600,3 +656,14 @@
 
     });
 </script>
+
+
+
+
+
+
+
+
+
+
+

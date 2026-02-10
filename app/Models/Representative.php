@@ -107,6 +107,11 @@ class Representative extends Model
         return $this->belongsTo(Location::class);
     }
 
+    public function inquiry()
+    {
+        return $this->hasOne(RepresentativeInquiry::class);
+    }
+
     public function training()
     {
         return $this->hasOne(RepresentativeTraining::class);
@@ -203,7 +208,6 @@ class Representative extends Model
             'رخصة السيارة وجه أول',
             'رخصة السيارة وجه ثاني',
             'إيصال مرافق (غاز أو مياه أو كهرباء)',
-            'مرفق بيانات الاستعلام',
         ];
     }
 
@@ -226,12 +230,12 @@ class Representative extends Model
         $attachments = $this->attachments ?? [];
 
         return collect($attachments)->map(function ($attachment) {
+            $path = $attachment['path'] ?? null;
+            $fixedPath = $path ? str_replace(['\\', '//'], ['/', '/'], $path) : null;
             return [
                 'type' => $attachment['type'] ?? 'مرفق غير معروف',
-                'path' => $attachment['path'] ?? null,
-                'url' => isset($attachment['path'])
-                    ? Storage::disk('public')->url($attachment['path'])
-                    : null,
+                'path' => $path,
+                'url' => $fixedPath ? asset('storage/' . $fixedPath) : null,
             ];
         })->toArray();
     }

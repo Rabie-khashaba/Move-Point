@@ -237,6 +237,8 @@
             ->name('representatives_no.attachment.view');
         Route::get('representatives-not-completed/{id}/attachment/{index}/download', [RepresentativeNotCompletedController::class, 'downloadAttachment'])
             ->name('representatives_no.attachment.download');
+        Route::get('representatives-not-completed/{id}/inquiry-attachment/{type}/{index}/view', [RepresentativeNotCompletedController::class, 'viewInquiryAttachment'])
+            ->name('representatives_no.inquiry_attachment.view');
 
         Route::post('representatives-not-completed/{id}/toggle-status', [RepresentativeNotCompletedController::class, 'toggleStatus'])
             ->name('representatives-not-completed.toggle-status');
@@ -653,4 +655,6 @@ Route::get('advance-requests/{id}/receipt', [AdvanceRequestController::class, 's
             Route::post('bulk-delete', [NotificationController::class, 'bulkDelete'])->name('bulk-delete');
         });
     });
+
+
 

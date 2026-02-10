@@ -73,6 +73,7 @@ class RepresentativeNoService
 
             ]);
 
+
             // Create user account for mobile app
             /* $user = User::create([
                 'phone' => $data['phone'],
@@ -99,7 +100,6 @@ class RepresentativeNoService
                 6 => 'رخصة السيارة وجه أول',
                 7 => 'رخصة السيارة وجه ثاني',
                 8 => 'إيصال مرافق (غاز أو مياه أو كهرباء)',
-                9 => 'مرفق بيانات الاستعلام',
 
             ];
 
@@ -155,6 +155,43 @@ class RepresentativeNoService
                 'total_attachments' => count($data['attachments'] ?? [])
             ]);
 
+            $storeInquiryAttachments = function (array $files, string $dir, string $typeLabel): array {
+                $stored = [];
+                foreach ($files as $file) {
+                    if (!$file || !$file->isValid()) {
+                        continue;
+                    }
+
+                    $mime = $file->getMimeType();
+                    $ext = strtolower($file->getClientOriginalExtension());
+                    $allowedExt = ['jpg', 'jpeg', 'png', 'pdf'];
+                    $allowedMime = ['image/jpeg', 'image/png', 'application/pdf'];
+
+                    if (!in_array($ext, $allowedExt) || !in_array($mime, $allowedMime)) {
+                        continue;
+                    }
+
+                    $fileName = 'inq_' . time() . '_' . uniqid() . '.' . $ext;
+                    $path = $file->storeAs($dir, $fileName, 'public');
+                    $stored[] = [
+                        'type' => $typeLabel,
+                        'path' => $path,
+                    ];
+                }
+                return $stored;
+            };
+
+            $inquiryFieldAttachments = $storeInquiryAttachments(
+                $data['inquiry_field_attachments'] ?? [],
+                'representatives/inquiry-field',
+                'استعلام ميداني'
+            );
+            $inquirySecurityAttachments = $storeInquiryAttachments(
+                $data['inquiry_security_attachments'] ?? [],
+                'representatives/inquiry-security',
+                'استعلام أمني'
+            );
+
             $lead = Lead::where('phone', $data['phone'])->first();
             // 💡 لو وجدنا lead نأخذ منه assigned_to
             $employeeId = $lead ? $lead->assigned_to : null;
@@ -192,6 +229,20 @@ class RepresentativeNoService
             ]);
 
             $representative = $this->repository->create($representativeData);
+
+            $representative->inquiry()->updateOrCreate(
+                ['representative_id' => $representative->id],
+                [
+                    'inquiry_type' => $data['inquiry_type'] ?? null,
+                    'inquiry_field_result' => $data['inquiry_field_result'] ?? null,
+                    'inquiry_field_notes' => $data['inquiry_field_notes'] ?? null,
+                    'inquiry_field_attachments' => $inquiryFieldAttachments,
+                    'inquiry_security_result' => $data['inquiry_security_result'] ?? null,
+                    'inquiry_security_notes' => $data['inquiry_security_notes'] ?? null,
+                    'inquiry_security_attachments' => $inquirySecurityAttachments,
+                    'security_inactive_reason' => $data['security_inactive_reason'] ?? null,
+                ]
+            );
 
             if (!empty($data['is_supervisor']) && $data['is_supervisor']) {
 
@@ -322,6 +373,54 @@ class RepresentativeNoService
                 : $representative->attachments;
         }
 
+        $inquiry = $representative->inquiry;
+
+        $existingInquiryFieldAttachments = [];
+        if ($inquiry && $inquiry->inquiry_field_attachments) {
+            $existingInquiryFieldAttachments = is_string($inquiry->inquiry_field_attachments)
+                ? json_decode($inquiry->inquiry_field_attachments, true) ?? []
+                : $inquiry->inquiry_field_attachments;
+        }
+
+        $existingInquirySecurityAttachments = [];
+        if ($inquiry && $inquiry->inquiry_security_attachments) {
+            $existingInquirySecurityAttachments = is_string($inquiry->inquiry_security_attachments)
+                ? json_decode($inquiry->inquiry_security_attachments, true) ?? []
+                : $inquiry->inquiry_security_attachments;
+        }
+
+        if (($data['inquiry_type'] ?? null) === 'security') {
+            $existingInquiryFieldAttachments = [];
+        }
+        if (($data['inquiry_type'] ?? null) === 'field') {
+            $existingInquirySecurityAttachments = [];
+        }
+
+        $storeInquiryAttachments = function (array $files, string $dir, string $typeLabel): array {
+            $stored = [];
+            foreach ($files as $file) {
+                if (!$file || !$file->isValid()) {
+                    continue;
+                }
+
+                $mime = $file->getMimeType();
+                $ext = strtolower($file->getClientOriginalExtension());
+                $allowedExt = ['jpg', 'jpeg', 'png', 'pdf'];
+                $allowedMime = ['image/jpeg', 'image/png', 'application/pdf'];
+
+                if (!in_array($ext, $allowedExt) || !in_array($mime, $allowedMime)) {
+                    continue;
+                }
+
+                $fileName = 'inq_' . time() . '_' . uniqid() . '.' . $ext;
+                $path = $file->storeAs($dir, $fileName, 'public');
+                $stored[] = [
+                    'type' => $typeLabel,
+                    'path' => $path,
+                ];
+            }
+            return $stored;
+        };
 
 
         // Generate password automatically
@@ -359,6 +458,7 @@ class RepresentativeNoService
                 'name' => $user->name,
                 'phone' => $user->phone,
             ]);
+
         }
 
         // Define required document types
@@ -372,7 +472,6 @@ class RepresentativeNoService
             6 => 'رخصة السيارة وجه أول',
             7 => 'رخصة السيارة وجه ثاني',
             8 => 'إيصال مرافق (غاز أو مياه أو كهرباء)',
-            9 => 'مرفق بيانات الاستعلام',
         ];
 
         // Handle new file uploads
@@ -448,8 +547,42 @@ class RepresentativeNoService
 
         $data['attachments'] = $existingAttachments;
 
+        $newInquiryFieldAttachments = $storeInquiryAttachments(
+            $data['inquiry_field_attachments'] ?? [],
+            'representatives/inquiry-field',
+            'استعلام ميداني'
+        );
+        if (!empty($newInquiryFieldAttachments)) {
+            $existingInquiryFieldAttachments = array_merge($existingInquiryFieldAttachments, $newInquiryFieldAttachments);
+        }
+        $data['inquiry_field_attachments'] = $existingInquiryFieldAttachments;
+
+        $newInquirySecurityAttachments = $storeInquiryAttachments(
+            $data['inquiry_security_attachments'] ?? [],
+            'representatives/inquiry-security',
+            'استعلام أمني'
+        );
+        if (!empty($newInquirySecurityAttachments)) {
+            $existingInquirySecurityAttachments = array_merge($existingInquirySecurityAttachments, $newInquirySecurityAttachments);
+        }
+        $data['inquiry_security_attachments'] = $existingInquirySecurityAttachments;
+
         // Update representative record
         $updatedRepresentative = $this->repository->update($representative, $data);
+
+        $updatedRepresentative->inquiry()->updateOrCreate(
+            ['representative_id' => $updatedRepresentative->id],
+            [
+                'inquiry_type' => $data['inquiry_type'] ?? null,
+                'inquiry_field_result' => $data['inquiry_field_result'] ?? null,
+                'inquiry_field_notes' => $data['inquiry_field_notes'] ?? null,
+                'inquiry_field_attachments' => $data['inquiry_field_attachments'] ?? [],
+                'inquiry_security_result' => $data['inquiry_security_result'] ?? null,
+                'inquiry_security_notes' => $data['inquiry_security_notes'] ?? null,
+                'inquiry_security_attachments' => $data['inquiry_security_attachments'] ?? [],
+                'security_inactive_reason' => $data['security_inactive_reason'] ?? null,
+            ]
+        );
 
 
         if (!empty($data['is_supervisor']) && $data['is_supervisor']) {

@@ -173,6 +173,11 @@
                                     @enderror
                                 </div>
 
+                                @php
+                                    $selectedGovernorateId = old('governorate_id', $representative->governorate_id ?? $representative->governorate?->id);
+                                    $selectedLocationId = old('location_id', $representative->location_id);
+                                @endphp
+
                                 <!-- المحافظة -->
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">المحافظة <span class="text-danger">*</span></label>
@@ -180,7 +185,7 @@
                                         <option value="">اختر المحافظة</option>
                                         @foreach($governorates as $governorate)
                                             <option value="{{ $governorate->id }}"
-                                                    {{ old('governorate_id', $representative->governorate_id) == $governorate->id ? 'selected' : '' }}>
+                                                    {{ (string)$selectedGovernorateId === (string)$governorate->id ? 'selected' : '' }}>
                                                 {{ $governorate->name }}
                                             </option>
                                         @endforeach
@@ -193,12 +198,12 @@
                                 <!-- الموقع -->
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">المنطقة</label>
-                                    <select name="location_id" id="location_id" class="form-control @error('location_id') is-invalid @enderror">
+                                    <select name="location_id" id="location_id" class="form-control @error('location_id') is-invalid @enderror" data-selected="{{ $selectedLocationId }}">
                                         <option value="">اختر المنطقة</option>
                                         @foreach($locations as $location)
                                             <option value="{{ $location->id }}"
                                                     data-governorate="{{ $location->governorate_id }}"
-                                                    {{ old('location_id', $representative->location_id) == $location->id ? 'selected' : '' }}>
+                                                    {{ (string)$selectedLocationId === (string)$location->id ? 'selected' : '' }}>
                                                 {{ $location->name }}
                                             </option>
                                         @endforeach
@@ -317,6 +322,13 @@
                         @endif
 
                                 <!-- إضافة مرفقات جديدة -->
+                                @php
+    $inquiry = $representative->inquiry;
+    $inquiryType = $inquiry->inquiry_type ?? $representative->inquiry_type;
+    $inquiryFieldResult = $inquiry->inquiry_field_result ?? $representative->inquiry_field_result;
+    $inquirySecurityResult = $inquiry->inquiry_security_result ?? $representative->inquiry_security_result;
+@endphp
+
                                 <div class="col-md-12 mb-3">
                                     <label class="form-label">إضافة مرفقات جديدة</label>
                                     <div class="row">
@@ -363,33 +375,94 @@
                                     @enderror
                                 </div>
 
-                                <!-- الاستعلام -->
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">الاستعلام</label>
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" name="inquiry_checkbox" value="1"
-                                               {{ old('inquiry_checkbox', $representative->inquiry_checkbox) ? 'checked' : '' }}>
-                                        <label class="form-check-label">نعم</label>
+                                <!-- نوع الاستعلام -->
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">نوع الاستعلام</label>
+                                    <div class="d-flex gap-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="inquiry_type" id="inquiryField" value="field" {{ old('inquiry_type', $inquiryType) == 'field' ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="inquiryField">استعلام ميداني</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="inquiry_type" id="inquirySecurity" value="security" {{ old('inquiry_type', $inquiryType) == 'security' ? 'checked' : '' }}>
+                                            <label class="form-check-label text-danger" for="inquirySecurity">استعلام أمني</label>
+                                        </div>
                                     </div>
-                                    <small class="text-muted">حدد إذا كان المندوب يحتاج إلى استعلام أو معلومات إضافية</small>
-                                    @error('inquiry_checkbox')
+                                    @error('inquiry_type')
                                         <div class="text-danger small">{{ $message }}</div>
                                     @enderror
                                 </div>
 
-                                <!-- بيانات الاستعلام -->
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">بيانات الاستعلام</label>
-                                    <textarea name="inquiry_data" class="form-control @error('inquiry_data') is-invalid @enderror"
-                                              placeholder="أدخل بيانات الاستعلام أو المعلومات الإضافية المطلوبة" rows="2">{{ old('inquiry_data', $representative->inquiry_data ?? '') }}</textarea>
-                                    <small class="text-muted">أدخل تفاصيل الاستعلام أو المعلومات المطلوبة</small>
-                                    <div class="col-md-4 mb-2">
-                                            <label class="form-label small">مرفق بيانات الاستعلام</label>
-                                            <input type="file" name="attachments[]" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                                <!-- استعلام ميداني -->
+                                <div class="col-md-12 mb-3" id="inquiryFieldSection" style="display: none;">
+                                    <div class="card border-primary">
+                                        <div class="card-body">
+                                            <h6 class="mb-3">استعلام ميداني</h6>
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">السمعة</label>
+                                                    <select name="inquiry_field_result" class="form-control">
+                                                        <option value="">اختر</option>
+                                                        <option value="good" {{ old('inquiry_field_result', $inquiryFieldResult) == 'good' ? 'selected' : '' }}>حسن السمعه</option>
+                                                        <option value="bad" {{ old('inquiry_field_result', $inquiryFieldResult) == 'bad' ? 'selected' : '' }}>سيء السمعه</option>
+                                                    </select>
+                                                    @error('inquiry_field_result')
+                                                        <div class="text-danger small">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">ملاحظات</label>
+                                                    <textarea name="inquiry_field_notes" class="form-control @error('inquiry_field_notes') is-invalid @enderror" rows="2" placeholder="أدخل تفاصيل الاستعلام">{{ old('inquiry_field_notes', $representative->inquiry_field_notes) }}</textarea>
+                                                    @error('inquiry_field_notes')
+                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">مرفقات الاستعلام الميداني (اختياري)</label>
+                                                    <input type="file" name="inquiry_field_attachments[]" class="form-control" accept=".pdf,.jpg,.jpeg,.png" multiple>
+                                                    @error('inquiry_field_attachments.*')
+                                                        <div class="text-danger small">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                            </div>
                                         </div>
-                                    @error('inquiry_data')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                                    </div>
+                                </div>
+
+                                <!-- استعلام أمني -->
+                                <div class="col-md-12 mb-3" id="inquirySecuritySection" style="display: none;">
+                                    <div class="card border-danger">
+                                        <div class="card-body">
+                                            <h6 class="mb-3 text-danger">استعلام أمني</h6>
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">الأحكام</label>
+                                                    <select name="inquiry_security_result" class="form-control">
+                                                        <option value="">اختر</option>
+                                                        <option value="has_judgments" {{ old('inquiry_security_result', $inquirySecurityResult) == 'has_judgments' ? 'selected' : '' }}>عليه أحكام</option>
+                                                        <option value="no_judgments" {{ old('inquiry_security_result', $inquirySecurityResult) == 'no_judgments' ? 'selected' : '' }}>ليس عليه أحكام</option>
+                                                    </select>
+                                                    @error('inquiry_security_result')
+                                                        <div class="text-danger small">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">ملاحظات</label>
+                                                    <textarea name="inquiry_security_notes" class="form-control @error('inquiry_security_notes') is-invalid @enderror" rows="2" placeholder="أدخل تفاصيل الاستعلام الأمني">{{ old('inquiry_security_notes', $representative->inquiry_security_notes) }}</textarea>
+                                                    @error('inquiry_security_notes')
+                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-danger">مرفقات الاستعلام الأمني (اختياري)</label>
+                                                    <input type="file" name="inquiry_security_attachments[]" class="form-control" accept=".pdf,.jpg,.jpeg,.png" multiple>
+                                                    @error('inquiry_security_attachments.*')
+                                                        <div class="text-danger small">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- لوكيشن المنزل -->
@@ -490,6 +563,30 @@ document.addEventListener('DOMContentLoaded', function() {
             this.value = this.value.slice(0, 14);
         }
     });
+
+    const inquiryFieldSection = document.getElementById('inquiryFieldSection');
+    const inquirySecuritySection = document.getElementById('inquirySecuritySection');
+    const inquiryTypeInputs = document.querySelectorAll('input[name="inquiry_type"]');
+
+    function setSectionEnabled(section, enabled) {
+        if (!section) return;
+        section.querySelectorAll('select, textarea, input').forEach(el => {
+            el.disabled = !enabled;
+        });
+        section.style.display = enabled ? 'block' : 'none';
+    }
+
+    function toggleInquirySections() {
+        const selected = document.querySelector('input[name="inquiry_type"]:checked')?.value;
+        setSectionEnabled(inquiryFieldSection, selected === 'field');
+        setSectionEnabled(inquirySecuritySection, selected === 'security');
+    }
+
+    inquiryTypeInputs.forEach(input => {
+        input.addEventListener('change', toggleInquirySections);
+    });
+
+    toggleInquirySections();
 });
 </script>
 
@@ -512,6 +609,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     data.forEach(loc => {
                         locationSelect.innerHTML += `<option value="${loc.id}">${loc.name}</option>`;
                     });
+                    const selectedLocation = locationSelect.dataset.selected;
+                    if (selectedLocation) {
+                        locationSelect.value = selectedLocation;
+                    }
                 });
         } else {
             locationSelect.innerHTML = `<option value="">اختر المنطقة</option>`;
@@ -526,3 +627,4 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 @endsection
+

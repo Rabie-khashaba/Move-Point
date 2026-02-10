@@ -191,7 +191,7 @@ class RepresentativeNotCompletedController extends Controller
 
         // Base Query (بدون علاقات – فقط الفلاتر الأساسية)
             $baseQuery = Representative::where('status', 0)
-                ->where('is_active', 1)
+               // ->where('is_active', 1)
                 ->when($request->filled('date_from'), fn($q) =>
                     $q->whereDate('start_date', '>=', $request->date_from)
                 )
@@ -379,6 +379,13 @@ class RepresentativeNotCompletedController extends Controller
             'code' => 'nullable|string|max:255',
             'attachments.*' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'inquiry_checkbox' => 'boolean',
+            'inquiry_type' => 'nullable|in:field,security',
+            'inquiry_field_result' => 'required_if:inquiry_type,field|in:good,bad',
+            'inquiry_field_notes' => 'nullable|string|max:1000',
+            'inquiry_field_attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'inquiry_security_result' => 'required_if:inquiry_type,security|in:has_judgments,no_judgments',
+            'inquiry_security_notes' => 'nullable|string|max:1000',
+            'inquiry_security_attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'inquiry_data' => 'nullable|string|max:1000',
             'governorate_id' => 'required|exists:governorates,id',
             'location_id' => 'required|exists:locations,id',
@@ -387,6 +394,30 @@ class RepresentativeNotCompletedController extends Controller
             'employee_id' => 'required|exists:users,id',
             'is_supervisor' => 'boolean', // ← أضفناها
         ]);
+
+        $validated['inquiry_checkbox'] = !empty($validated['inquiry_type']);
+
+        if (($validated['inquiry_type'] ?? null) === 'field') {
+            $validated['inquiry_security_result'] = null;
+            $validated['inquiry_security_notes'] = null;
+            $validated['inquiry_security_attachments'] = [];
+        } elseif (($validated['inquiry_type'] ?? null) === 'security') {
+            $validated['inquiry_field_result'] = null;
+            $validated['inquiry_field_notes'] = null;
+            $validated['inquiry_field_attachments'] = [];
+        } else {
+            $validated['inquiry_field_result'] = null;
+            $validated['inquiry_field_notes'] = null;
+            $validated['inquiry_field_attachments'] = [];
+            $validated['inquiry_security_result'] = null;
+            $validated['inquiry_security_notes'] = null;
+            $validated['inquiry_security_attachments'] = [];
+        }
+
+        if (($validated['inquiry_type'] ?? null) === 'security' && ($validated['inquiry_security_result'] ?? null) === 'has_judgments') {
+            $validated['is_active'] = false;
+            $validated['security_inactive_reason'] = 'لأسباب أمنية';
+        }
 
         $representative = $this->service->create($validated);
 
@@ -405,7 +436,7 @@ class RepresentativeNotCompletedController extends Controller
     {
         $this->authorize('view_representatives_no');
         $representative = $this->service->find($id);
-        $representative->load(['training']);
+        $representative->load(['training', 'inquiry']);
         $workStartDate = \App\Models\WorkStart::where('representative_id', $representative->id)
             ->latest('date')
             ->value('date');
@@ -609,16 +640,14 @@ public function viewAttachment($id, $index)
             abort(404, 'الملف غير موجود');
         }
 
-        $attachment = $attachments[$index]['path'] ?? null;
+        $path = $attachments[$index]['path'] ?? null;
+        $path = $path ? str_replace(['\\', '//'], ['/', '/'], $path) : null;
 
-        if (!$attachment) {
+        if (!$path || !Storage::disk('public')->exists($path)) {
             abort(404, 'الملف غير موجود');
         }
 
-        // توليد الرابط المباشر بدون أي تعديل
-        $url = url('storage/app/public/' . $attachment);
-
-        return redirect($url);
+        return redirect(asset('storage/' . $path));
 
     } catch (\Exception $e) {
         \Log::error('Error viewing attachment: ' . $e->getMessage(), [
@@ -629,7 +658,43 @@ public function viewAttachment($id, $index)
         abort(500, 'حدث خطأ أثناء عرض الملف');
     }
 }
+    public function viewInquiryAttachment($id, $type, $index)
+    {
+        try {
+            $this->authorize('view_representatives_no');
+            $representative = $this->service->find($id);
+            $inquiry = $representative->inquiry;
 
+            if (!in_array($type, ['field', 'security'], true)) {
+                abort(404, 'الملف غير موجود');
+            }
+
+            $attachments = $type === 'field'
+                ? ($inquiry->inquiry_field_attachments ?? $representative->inquiry_field_attachments ?? [])
+                : ($inquiry->inquiry_security_attachments ?? $representative->inquiry_security_attachments ?? []);
+
+            if (!$attachments || !isset($attachments[$index])) {
+                abort(404, 'الملف غير موجود');
+            }
+
+            $item = $attachments[$index];
+            $path = is_array($item) ? ($item['path'] ?? null) : $item;
+            $path = $path ? str_replace(['\\', '//'], ['/', '/'], $path) : null;
+
+            if (!$path || !Storage::disk('public')->exists($path)) {
+                abort(404, 'الملف غير موجود');
+            }
+
+            return redirect(asset('storage/' . $path));
+        } catch (\Exception $e) {
+            \Log::error('Error viewing inquiry attachment: ' . $e->getMessage(), [
+                'representative_id' => $id,
+                'type' => $type,
+                'attachment_index' => $index,
+            ]);
+            abort(500, 'حدث خطأ أثناء عرض الملف');
+        }
+    }
 
     public function edit($id)
     {
@@ -666,6 +731,13 @@ public function viewAttachment($id, $index)
             'code' => 'nullable|string|max:255',
             'attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'inquiry_checkbox' => 'boolean',
+            'inquiry_type' => 'nullable|in:field,security',
+            'inquiry_field_result' => 'required_if:inquiry_type,field|in:good,bad',
+            'inquiry_field_notes' => 'nullable|string|max:1000',
+            'inquiry_field_attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'inquiry_security_result' => 'required_if:inquiry_type,security|in:has_judgments,no_judgments',
+            'inquiry_security_notes' => 'nullable|string|max:1000',
+            'inquiry_security_attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'inquiry_data' => 'nullable|string|max:1000',
             'governorate_id' => 'required|exists:governorates,id',
             'location_id' => 'required|exists:locations,id',
@@ -675,6 +747,30 @@ public function viewAttachment($id, $index)
             'is_supervisor' => 'boolean', // ← أضفناها
         ]);
 
+
+        $validated['inquiry_checkbox'] = !empty($validated['inquiry_type']);
+
+        if (($validated['inquiry_type'] ?? null) === 'field') {
+            $validated['inquiry_security_result'] = null;
+            $validated['inquiry_security_notes'] = null;
+            $validated['inquiry_security_attachments'] = [];
+        } elseif (($validated['inquiry_type'] ?? null) === 'security') {
+            $validated['inquiry_field_result'] = null;
+            $validated['inquiry_field_notes'] = null;
+            $validated['inquiry_field_attachments'] = [];
+        } else {
+            $validated['inquiry_field_result'] = null;
+            $validated['inquiry_field_notes'] = null;
+            $validated['inquiry_field_attachments'] = [];
+            $validated['inquiry_security_result'] = null;
+            $validated['inquiry_security_notes'] = null;
+            $validated['inquiry_security_attachments'] = [];
+        }
+
+        if (($validated['inquiry_type'] ?? null) === 'security' && ($validated['inquiry_security_result'] ?? null) === 'has_judgments') {
+            $validated['is_active'] = false;
+            $validated['security_inactive_reason'] = 'لأسباب أمنية';
+        }
 
         $representative = $this->service->update($id, $validated);
         //return redirect()->route('representatives-not-completed.index')->with('success', 'تم تحديث المندوب بنجاح!');

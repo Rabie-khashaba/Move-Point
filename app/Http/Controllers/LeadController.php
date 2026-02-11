@@ -543,6 +543,12 @@ class LeadController extends Controller
                             ->orWhere('governorates.name', 'like', "%{$term}%");
                     });
                 })
+                ->when($request->filled('governorate_id'), function ($query) use ($request) {
+                    return $query->where('leads.governorate_id', $request->governorate_id);
+                })
+                ->when($request->filled('location_id'), function ($query) use ($request) {
+                    return $query->where('leads.location_id', $request->location_id);
+                })
                 ->when($request->filled('date_from'), function ($query) use ($request) {
                     return $query->whereDate('leads.created_at', '>=', $request->date_from);
                 })

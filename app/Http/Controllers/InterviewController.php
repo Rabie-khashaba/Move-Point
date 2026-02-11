@@ -1,5 +1,4 @@
-﻿<?php
-
+<?php
 namespace App\Http\Controllers;
 
 use App\Models\Interview;
@@ -7,21 +6,23 @@ use App\Models\InterviewNote;
 use App\Models\Lead;
 use App\Models\Message;
 use App\Models\User;
+use App\Models\Supervisor;
+use App\Models\Location;
 use App\Services\WhatsAppService;
-use App\Services\WhatsAppServicebyair;
 use App\Services\LeadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use App\Exports\InterviewsExport;
-use App\Models\Supervisor;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Validation\ValidationException;
+
 
 class InterviewController extends Controller
 {
     protected $whatsappService  ,$service;
 
-    public function __construct(WhatsAppServicebyair $whatsappService , LeadService $service)
+    public function __construct(WhatsAppService $whatsappService , LeadService $service)
     {
         $this->whatsappService = $whatsappService;
         $this->service = $service;
@@ -39,7 +40,7 @@ class InterviewController extends Controller
         $status = $request->input('status');
 
         // Fetch the interviews with pagination, including filters
-        $interviews = Interview::with(['lead.source','lead.governorate', 'message.government', 'message.location', 'notes' => function($query) {
+        $interviews = Interview::with(['lead.source', 'message.government', 'message.location', 'notes' => function($query) {
                 $query->latest()->limit(1); // Get only the latest note
             }])
             ->when($search, function ($query, $search) {
@@ -58,7 +59,7 @@ class InterviewController extends Controller
             })->when($request->filled('status'), function ($query) use ($request) {
                 return $query->where('status', $request->status);
             })
-            ->when($request->filled('employee_id'), function ($query) use ($request) {
+             ->when($request->filled('employee_id'), function ($query) use ($request) {
                 return $query->where('assigned_to', $request->employee_id); // 👈 فلتر بالموظف
             })
             ->when($request->filled('governorate_id'), function ($query) use ($request) {
@@ -66,9 +67,14 @@ class InterviewController extends Controller
                     $q->where('government_id', $request->governorate_id);
                 });
             })
+            ->when($request->filled('location_id'), function ($query) use ($request) {
+                $query->whereHas('message', function ($q) use ($request) {
+                    $q->where('location_id', $request->location_id);
+                });
+            })
 
             ->latest('date_interview')
-            ->paginate(15)->appends($request->query()); // 👈 يحافظ على الفلاتر أثناء التنقل بين الصفحات
+            ->paginate(15)->appends($request->query());
 
 
         // إجمالي المقابلات
@@ -104,8 +110,7 @@ class InterviewController extends Controller
             ->where('status', 'هيفكر')
             ->count();
 
-
-        $noResponseCount = \App\Models\Interview::query()
+             $noResponseCount = \App\Models\Interview::query()
             ->when(request('date_from'), fn($q) => $q->whereDate('date_interview', '>=', request('date_from')))
             ->when(request('date_to'), fn($q) => $q->whereDate('date_interview', '<=', request('date_to')))
             ->where('status', 'لم يرد')
@@ -133,18 +138,17 @@ class InterviewController extends Controller
         })
         ->get();
 
+
         $governorates = \App\Models\Governorate::get();
-
-
-
+        $locations = Location::get();
 
 
 
 
         // Pass the interviews to the view
         return view('interviews.index', compact('interviews',
-            'search' ,'totalInterviews','notInterestedCount','acceptedCount','thinkingCount',
-            'undefinedCount','absentCount','noResponseCount','followUpNextTimeCount','employees','governorates'));
+            'search' ,'totalInterviews','notInterestedCount','acceptedCount','thinkingCount','undefinedCount'
+            ,'absentCount','noResponseCount','followUpNextTimeCount','employees','governorates','locations'));
     }
 
     public function show($id)
@@ -189,7 +193,7 @@ class InterviewController extends Controller
         try {
 
             $validated = $request->validate([
-                'note' => 'required|string|max:5000',
+                'note' => 'nullable|string|max:5000',
                 'status' => 'required',
             ]);
 
@@ -236,6 +240,7 @@ class InterviewController extends Controller
             'date_interview' => 'required|date',
             'message_id' => 'required',
             'supervisor_id' => 'nullable',
+
         ]);
 
 
@@ -246,7 +251,7 @@ class InterviewController extends Controller
         $interview->supervisor_id = $request->supervisor_id;
         $interview->save();
 
-        // تحديد الحالة بناءً على الفرق في الأيام
+// تحديد الحالة بناءً على الفرق في الأيام
         $diffDays = \Carbon\Carbon::parse($oldDate)->diffInDays($newDate, false);
 
         if ($diffDays > 0) {
@@ -274,7 +279,13 @@ class InterviewController extends Controller
         $message = Message::find($request->message_id);
 
         // Send WhatsApp message with Google Maps URL
-        $whatsappResult = $this->whatsappService->send($lead->phone, $message->description, $request->date_interview, $message->google_map_url);
+      //  $whatsappResult = $this->whatsappService->send($lead->phone, $message->description, $request->date_interview, $message->google_map_url);
+
+            $employee = auth()->user()?->employee;
+            $deviceToken = $employee?->device?->device_token;
+
+            $whatsapp = app(\App\Services\WhatsAppServicebyair::class);
+            $result = $whatsapp->send($lead->phone, $message->description, $request->date_interview, $message->google_map_url , $deviceToken);
 
 //        return response()->json([
 //            'success' => true,
@@ -309,6 +320,11 @@ class InterviewController extends Controller
         try {
             $interview = Interview::with(['lead', 'message'])->findOrFail($id);
 
+            // Send WhatsApp message with Google Maps URL
+            //$result = $this->whatsappService->send($interview->lead->phone, $interview->message->description, $interview->date_interview, $interview->message->google_map_url);
+
+
+
             $employee = auth()->user()?->employee;
             $deviceToken = $employee?->device?->device_token;
 
@@ -321,11 +337,7 @@ class InterviewController extends Controller
                 $deviceToken
             );
 
-
-            // Send WhatsApp message with Google Maps URL
-           // $result = $this->whatsappService->send($interview->lead->phone, $interview->message->description, $interview->date_interview, $interview->message->google_map_url);
-
-            if (isset($result['success']) && $result['success'] === true) {
+            if ($result) {
                 return response()->json([
                     'success' => true,
                     'message' => 'تم إرسال رسالة واتساب بنجاح'
@@ -333,7 +345,7 @@ class InterviewController extends Controller
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => $result['message'] ?? 'فشل في إرسال رسالة واتساب'
+                    'message' => 'فشل في إرسال رسالة واتساب'
                 ]);
             }
         } catch (\Exception $e) {
@@ -344,65 +356,137 @@ class InterviewController extends Controller
         }
     }
 
-    public function store(Request $request)
-    {
-        //return $request;
-        try {
-            $validated = $request->validate([
-                'lead_id' => 'required|exists:leads,id',
-                'message_id' => 'required|exists:messages,id',
-                'supervisor_id' => 'required|exists:supervisors,id',
-                'date_interview' => 'required|date|after:now',
-            ]);
+    // public function store(Request $request)
+    // {
+    //     try {
+    //         $validated = $request->validate([
+    //             'lead_id' => 'required|exists:leads,id',
+    //             'message_id' => 'required|exists:messages,id',
+    //             'supervisor_id' => 'nullable|exists:supervisors,id',
+    //             'date_interview' => 'required|date|after:now',
+    //         ]);
 
-            $lead = \App\Models\Lead::findOrFail($request->lead_id);
-            // Use lead assignee; fallback to current user if lead is unassigned.
-            $assignedTo = $lead->assigned_to ?? auth()->id();
-            if (!$assignedTo) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'لا يمكن جدولة المقابلة لأن المستخدم المسؤول غير محدد.'
-                ], 422);
-            }
+    //         $lead = \App\Models\Lead::findOrFail($validated['lead_id']);
 
-            // Create the interview بنفس الموظف المعين للـ lead
-            $interview = Interview::create([
-                'lead_id'        => $validated['lead_id'],
-                'message_id'     => $validated['message_id'],
-                'supervisor_id'     => $validated['supervisor_id'],
-                'date_interview' => $validated['date_interview'],
-                'assigned_to'    => $assignedTo, // lead assignee or current user
-            ]);
+    //         // Create the interview بنفس الموظف المعين للـ lead
+    //         $interview = Interview::create([
+    //             'lead_id'        => $validated['lead_id'],
+    //             'message_id'     => $validated['message_id'],
+    //             'supervisor_id'     => $validated['supervisor_id'],
+    //             'date_interview' => $validated['date_interview'],
+    //             'assigned_to'    => $lead->assigned_to ?? 0, // 👈 نفس assign بتاع lead
+    //         ]);
 
-            // Update lead status to "حالة مقابلة"
-            $lead = Lead::find($validated['lead_id']);
-            $lead->update(['status' => 'مقابلة']);
+    //         // Update lead status to "حالة مقابلة"
+    //         $lead = Lead::find($validated['lead_id']);
+    //         $lead->update(['status' => 'مقابلة']);
 
-            // Get the message for WhatsApp
-            $message = Message::find($validated['message_id']);
+    //         // Get the message for WhatsApp
+    //         $message = Message::find($validated['message_id']);
 
-            // Send WhatsApp message with Google Maps URL
-            $whatsappResult = $this->whatsappService->send($lead->phone, $message->description, $validated['date_interview'], $message->google_map_url);
+    //         // Send WhatsApp message with Google Maps URL
+    //         //$whatsappResult = $this->whatsappService->send($lead->phone, $message->description, $validated['date_interview'], $message->google_map_url);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'تم جدولة المقابلة بنجاح' . ($whatsappResult ? ' وتم إرسال رسالة واتساب' : ' ولكن فشل في إرسال رسالة واتساب'),
-                'interview' => $interview,
-                'whatsapp_sent' => $whatsappResult
-            ]);
+    //         $employee = auth()->user()?->employee;
+    //         $deviceToken = $employee?->device?->device_token;
 
-        } catch (\Exception $e) {
-            Log::error('Error creating interview: ' . $e->getMessage(), [
-                'request' => $request->all(),
-                'error' => $e->getMessage()
-            ]);
+    //         $whatsapp = app(\App\Services\WhatsAppServicebyair::class);
+    //         $whatsappResult = $whatsapp->send(
+    //             $interview->lead->phone,
+    //             $interview->message->description,
+    //             $interview->$validated['date_interview'],
+    //             $interview->message->google_map_url,
+    //             $deviceToken
+    //         );
 
-            return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء جدولة المقابلة: ' . $e->getMessage()
-            ], 500);
-        }
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'تم جدولة المقابلة بنجاح' . ($whatsappResult ? ' وتم إرسال رسالة واتساب' : ' ولكن فشل في إرسال رسالة واتساب'),
+    //             'interview' => $interview,
+    //             'whatsapp_sent' => $whatsappResult
+    //         ]);
+
+    //     } catch (\Exception $e) {
+    //         Log::error('Error creating interview: ' . $e->getMessage(), [
+    //             'request' => $request->all(),
+    //             'error' => $e->getMessage()
+    //         ]);
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'حدث خطأ أثناء جدولة المقابلة: ' . $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+
+
+
+public function store(Request $request)
+{
+    try {
+        $validated = $request->validate([
+            'lead_id' => 'required|exists:leads,id',
+            'message_id' => 'required|exists:messages,id',
+            'supervisor_id' => 'nullable|exists:supervisors,id',
+            'date_interview' => 'required|date|after:now',
+        ]);
+
+        $lead = Lead::findOrFail($validated['lead_id']);
+
+        $interview = Interview::create([
+            'lead_id'        => $validated['lead_id'],
+            'message_id'     => $validated['message_id'],
+            'supervisor_id'  => $validated['supervisor_id'] ?? null,
+            'date_interview' => $validated['date_interview'],
+            'assigned_to'    => $lead->assigned_to ?? 0,
+        ]);
+
+        // تحديث حالة الـ lead
+        $lead->update(['status' => 'مقابلة']);
+
+        // إرسال واتساب
+        $employee = auth()->user()?->employee;
+        $deviceToken = $employee?->device?->device_token;
+
+        $whatsapp = app(\App\Services\WhatsAppServicebyair::class);
+
+        $whatsappResult = $whatsapp->send(
+            $lead->phone,                              // ✅ أو $interview->lead->phone
+            $interview->message->description,          // ✅
+            $validated['date_interview'],              // ✅ الأهم (String)
+            $interview->message->google_map_url,       // ✅
+            $deviceToken
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم جدولة المقابلة بنجاح' . ($whatsappResult ? ' وتم إرسال رسالة واتساب' : ' ولكن فشل في إرسال رسالة واتساب'),
+            'interview' => $interview,
+            'whatsapp_sent' => (bool) $whatsappResult
+        ]);
+
+    } catch (ValidationException $ve) {
+        return response()->json([
+            'success' => false,
+            'message' => $ve->errors() ? collect($ve->errors())->flatten()->first() : 'بيانات غير صالحة',
+            'errors'  => $ve->errors(),
+        ], 422);
+
+    } catch (\Throwable $e) {
+        Log::error('Error creating interview: ' . $e->getMessage(), [
+            'request' => $request->all(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'حدث خطأ أثناء جدولة المقابلة: ' . $e->getMessage()
+        ], 500);
     }
+}
+
 
 
 
@@ -494,36 +578,29 @@ class InterviewController extends Controller
 }
 
 
-public function export(Request $request)
-{
-    return Excel::download(new InterviewsExport($request), 'interviews.xlsx');
-}
-
-
-// InterviewController.php
-public function getSupervisors(Request $request)
-{
-    $governmentId = $request->government_id;
-    $locationId = $request->location_id;
-
-    if (!$governmentId || !$locationId) {
-        return response()->json([]);
+    public function export(Request $request)
+    {
+        return Excel::download(new InterviewsExport($request), 'interviews.xlsx');
     }
 
-    // جلب المشرفين النشطين المرتبطين بالمحافظة والمنطقة
-    $supervisors = Supervisor::active()
-        ->where('governorate_id', $governmentId)
-        ->where('location_id', $locationId)
-        ->get(['id', 'name']);
 
-    return response()->json($supervisors);
+    // InterviewController.php
+    public function getSupervisors(Request $request)
+    {
+        $governmentId = $request->government_id;
+        $locationId = $request->location_id;
+
+        if (!$governmentId || !$locationId) {
+            return response()->json([]);
+        }
+
+        // جلب المشرفين النشطين المرتبطين بالمحافظة والمنطقة
+        $supervisors = Supervisor::active()
+            ->where('governorate_id', $governmentId)
+            ->where('location_id', $locationId)
+            ->get([ 'id','user_id', 'name']);
+
+        return response()->json($supervisors);
+    }
+
 }
-
-
-
-}
-
-
-
-
-

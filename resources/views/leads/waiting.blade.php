@@ -122,6 +122,23 @@
                 <label class="form-label">إلى تاريخ</label>
                 <input type="date" class="form-control {{ request('date_to') ? 'filter-active' : '' }}" id="dateTo" value="{{ request('date_to', now()->toDateString()) }}">
             </div>
+            <div class="col-md-2">
+                <label class="form-label">المحافظة</label>
+                <select class="form-control {{ request('governorate_id') ? 'filter-active' : '' }}" id="filterGovernorate">
+                    <option value="">جميع المحافظات</option>
+                    @foreach(\App\Models\Governorate::all() as $governorate)
+                        <option value="{{ $governorate->id }}" {{ request('governorate_id') == $governorate->id ? 'selected' : '' }}>
+                            {{ $governorate->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">المنطقة</label>
+                <select class="form-control {{ request('location_id') ? 'filter-active' : '' }}" id="filterLocation" data-current-location="{{ request('location_id') }}">
+                    <option value="">جميع المناطق</option>
+                </select>
+            </div>
 
             <div class="col-md-3 d-flex align-items-end">
                 <div class="d-flex gap-2 w-100">
@@ -191,7 +208,7 @@
     document.addEventListener('DOMContentLoaded', function () {
 
         const urlParams = new URLSearchParams(window.location.search);
-        if (!urlParams.has('date_from') && !urlParams.has('date_to') && !urlParams.has('search')) {
+        if (!urlParams.has('date_from') && !urlParams.has('date_to') && !urlParams.has('search') && !urlParams.has('governorate_id') && !urlParams.has('location_id')) {
             const today = new Date().toISOString().split('T')[0];
             const url = new URL(window.location.href);
             url.searchParams.set('date_from', today);
@@ -200,17 +217,59 @@
             return; // Exit early to let the page reload with filters
         }
 
+    const governorateSelect = document.getElementById('filterGovernorate');
+    const locationSelect = document.getElementById('filterLocation');
+
+    function loadLocations(governorateId, selectedLocationId) {
+        if (!governorateId) {
+            locationSelect.innerHTML = '<option value="">جميع المناطق</option>';
+            return;
+        }
+
+        fetch(`{{ url('getlocations') }}/${governorateId}`)
+            .then(res => res.json())
+            .then(data => {
+                locationSelect.innerHTML = '<option value="">جميع المناطق</option>';
+                data.forEach(loc => {
+                    const option = document.createElement('option');
+                    option.value = loc.id;
+                    option.textContent = loc.name;
+                    if (String(loc.id) === String(selectedLocationId)) {
+                        option.selected = true;
+                    }
+                    locationSelect.appendChild(option);
+                });
+            })
+            .catch(() => {
+                locationSelect.innerHTML = '<option value="">خطأ في تحميل المناطق</option>';
+            });
+    }
+
+    if (governorateSelect && locationSelect) {
+        governorateSelect.addEventListener('change', function () {
+            loadLocations(this.value, null);
+        });
+
+        if (governorateSelect.value) {
+            loadLocations(governorateSelect.value, locationSelect.dataset.currentLocation);
+        }
+    }
+
     // Apply filters function
     window.applyFilters = function() {
         const searchTerm = document.getElementById('searchInput').value;
         const dateFrom = document.getElementById('dateFrom').value;
         const dateTo = document.getElementById('dateTo').value;
+        const governorateId = governorateSelect ? governorateSelect.value : '';
+        const locationId = locationSelect ? locationSelect.value : '';
 
         const url = new URL(window.location.href);
 
         // Clear existing filters
         url.searchParams.delete('date_from');
         url.searchParams.delete('date_to');
+        url.searchParams.delete('governorate_id');
+        url.searchParams.delete('location_id');
 
         // Add new filters
         if (searchTerm) {
@@ -222,6 +281,12 @@
         if (dateTo) {
             url.searchParams.set('date_to', dateTo);
         }
+        if (governorateId) {
+            url.searchParams.set('governorate_id', governorateId);
+        }
+        if (locationId) {
+            url.searchParams.set('location_id', locationId);
+        }
 
 
         window.location.href = url.toString();
@@ -232,12 +297,18 @@
         document.getElementById('searchInput').value = '';
         document.getElementById('dateFrom').value = '';
         document.getElementById('dateTo').value = '';
+        if (governorateSelect) governorateSelect.value = '';
+        if (locationSelect) {
+            locationSelect.innerHTML = '<option value="">جميع المناطق</option>';
+        }
 
 
         const url = new URL(window.location.href);
         url.searchParams.delete('search');
         url.searchParams.delete('date_from');
         url.searchParams.delete('date_to');
+        url.searchParams.delete('governorate_id');
+        url.searchParams.delete('location_id');
 
 
         window.location.href = url.toString();
@@ -301,6 +372,8 @@
             const searchTerm = document.getElementById('searchInput').value;
             const dateFrom = document.getElementById('dateFrom').value;
             const dateTo = document.getElementById('dateTo').value;
+            const governorateId = governorateSelect ? governorateSelect.value : '';
+            const locationId = locationSelect ? locationSelect.value : '';
 
             const url = new URL(window.location.href);
 
@@ -308,6 +381,8 @@
             url.searchParams.delete('search');
             url.searchParams.delete('date_from');
             url.searchParams.delete('date_to');
+            url.searchParams.delete('governorate_id');
+            url.searchParams.delete('location_id');
             url.searchParams.delete('page'); // Reset to first page
 
             // Add new filters
@@ -319,6 +394,12 @@
             }
             if (dateTo) {
                 url.searchParams.set('date_to', dateTo);
+            }
+            if (governorateId) {
+                url.searchParams.set('governorate_id', governorateId);
+            }
+            if (locationId) {
+                url.searchParams.set('location_id', locationId);
             }
 
 

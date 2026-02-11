@@ -98,11 +98,14 @@ class RepresentativeController extends Controller
 
         // Base Query
         $baseQuery = Representative::where('status', 1)
-                ->where('is_active', 1)
+                //->where('is_active', 1)
                 ->when($request->filled('date_from'), fn($q) => $q->whereDate('converted_to_active_date', '>=', $request->date_from))
                 ->when($request->filled('date_to'), fn($q) => $q->whereDate('converted_to_active_date', '<=', $request->date_to))
                 ->when($request->filled('employee_id'), fn($q) => $q->where('employee_id', $request->employee_id))
                 ->when($request->filled('document_received'), fn($q) => $q->where('documents_received', $request->document_received))
+                ->when($request->filled('company_id'), fn($q) => $q->where('company_id', $request->company_id))
+                ->when($request->filled('governorate_id'), fn($q) => $q->where('governorate_id', $request->governorate_id))
+                ->when($request->filled('location_id'), fn($q) => $q->where('location_id', $request->location_id))
                 ->when($request->filled('code_status'), function ($q) use ($request) {
                     if ($request->code_status === 'with') {
                         $q->whereNotNull('code')->where('code', '!=', '');
@@ -112,7 +115,6 @@ class RepresentativeController extends Controller
                         });
                     }
                 })
-                ->when($request->filled('company_id'), fn($q) => $q->where('company_id', $request->company_id))
                 ->when($request->filled('search'), function($q) use ($request){
                     $q->where(function($qq) use ($request){
                         $qq->where('name', 'like', "%{$request->search}%")
@@ -121,6 +123,8 @@ class RepresentativeController extends Controller
                            ->orWhere('national_id', 'like', "%{$request->search}%");
                     });
                 });
+
+
 
         // --------------------------
         //     Inquiry Filter
@@ -171,36 +175,17 @@ class RepresentativeController extends Controller
                 ->where('company_id', 10)
                 ->count();
 
+
             $companies = Company::orderBy('name')->get();
-            $companyCounts = (clone $baseQuery)
+            $representativeIds = (clone $baseQuery)->pluck('id');
+            $companyCounts = Representative::whereIn('id', $representativeIds)
                 ->select('company_id', DB::raw('count(*) as total'))
                 ->groupBy('company_id')
                 ->pluck('total', 'company_id')
                 ->toArray();
 
-            $companyCardStyles = [
-                ['bg' => 'bg-primary', 'icon' => 'feather-user-check', 'text' => 'text-blue'],
-                ['bg' => 'bg-info', 'icon' => 'feather-user-plus', 'text' => 'text-black'],
-                ['bg' => 'bg-success', 'icon' => 'feather-briefcase', 'text' => 'text-success'],
-                ['bg' => 'bg-warning', 'icon' => 'feather-award', 'text' => 'text-warning'],
-                ['bg' => 'bg-secondary', 'icon' => 'feather-users', 'text' => 'text-secondary'],
-                ['bg' => 'bg-danger', 'icon' => 'feather-alert-circle', 'text' => 'text-danger'],
-            ];
 
-            $employees = \App\Models\Employee::where('department_id', 7)
-                ->where('is_active', 1)
-                ->get();
-
-        return view('representatives.index', compact(
-            'representatives',
-            'totalRepresentatives',
-            'NoonRepresentatives',
-            'boostaRepresentatives',
-            'companies',
-            'companyCounts',
-            'companyCardStyles',
-            'employees'
-        ));
+        return view('representatives.index', compact('representatives','totalRepresentatives','NoonRepresentatives','boostaRepresentatives','companies','companyCounts'));
     }
 
     public function create(Request $request)
@@ -260,6 +245,8 @@ class RepresentativeController extends Controller
     {
         $this->authorize('view_representatives');
         $representative = $this->service->find($id);
+        $representative->load(['training', 'inquiry']);
+
 
          $workStartDate = \App\Models\WorkStart::where('representative_id', $representative->id)
             ->latest('date')
@@ -488,6 +475,45 @@ class RepresentativeController extends Controller
         }
     }
 
+
+    public function viewInquiryAttachment($id, $type, $index)
+    {
+        try {
+            $this->authorize('view_representatives_no');
+            $representative = $this->service->find($id);
+            $inquiry = $representative->inquiry;
+
+            if (!in_array($type, ['field', 'security'], true)) {
+                abort(404, 'الملف غير موجود');
+            }
+
+            $attachments = $type === 'field'
+                ? ($inquiry->inquiry_field_attachments ?? $representative->inquiry_field_attachments ?? [])
+                : ($inquiry->inquiry_security_attachments ?? $representative->inquiry_security_attachments ?? []);
+
+            if (!$attachments || !isset($attachments[$index])) {
+                abort(404, 'الملف غير موجود');
+            }
+
+            $item = $attachments[$index];
+            $path = is_array($item) ? ($item['path'] ?? null) : $item;
+            $path = $path ? str_replace(['\\', '//'], ['/', '/'], $path) : null;
+
+            if (!$path || !Storage::disk('public')->exists($path)) {
+                abort(404, 'الملف غير موجود');
+            }
+
+            return redirect(asset('storage/' . $path));
+        } catch (\Exception $e) {
+            \Log::error('Error viewing inquiry attachment: ' . $e->getMessage(), [
+                'representative_id' => $id,
+                'type' => $type,
+                'attachment_index' => $index,
+            ]);
+            abort(500, 'حدث خطأ أثناء عرض الملف');
+        }
+    }
+
     public function edit($id)
     {
         $this->authorize('edit_representatives');
@@ -523,6 +549,14 @@ class RepresentativeController extends Controller
             'attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'inquiry_checkbox' => 'boolean',
             'inquiry_data' => 'nullable|string|max:1000',
+
+            'inquiry_type' => 'nullable|in:field,security',
+            'inquiry_field_result' => 'required_if:inquiry_type,field|in:good,bad',
+            'inquiry_field_notes' => 'nullable|string|max:1000',
+            'inquiry_field_attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'inquiry_security_result' => 'required_if:inquiry_type,security|in:has_judgments,no_judgments',
+            'inquiry_security_notes' => 'nullable|string|max:1000',
+            'inquiry_security_attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'governorate_id' => 'required|exists:governorates,id',
             'location_id' => 'required|exists:locations,id',
             'home_location' => 'nullable|url|max:500',
@@ -530,6 +564,31 @@ class RepresentativeController extends Controller
             'employee_id' => 'required|exists:users,id',
             'is_supervisor' => 'boolean', // ← أضفناها
         ]);
+
+
+        $validated['inquiry_checkbox'] = !empty($validated['inquiry_type']);
+
+        if (($validated['inquiry_type'] ?? null) === 'field') {
+            $validated['inquiry_security_result'] = null;
+            $validated['inquiry_security_notes'] = null;
+            $validated['inquiry_security_attachments'] = [];
+        } elseif (($validated['inquiry_type'] ?? null) === 'security') {
+            $validated['inquiry_field_result'] = null;
+            $validated['inquiry_field_notes'] = null;
+            $validated['inquiry_field_attachments'] = [];
+        } else {
+            $validated['inquiry_field_result'] = null;
+            $validated['inquiry_field_notes'] = null;
+            $validated['inquiry_field_attachments'] = [];
+            $validated['inquiry_security_result'] = null;
+            $validated['inquiry_security_notes'] = null;
+            $validated['inquiry_security_attachments'] = [];
+        }
+
+        if (($validated['inquiry_type'] ?? null) === 'security' && ($validated['inquiry_security_result'] ?? null) === 'has_judgments') {
+            $validated['is_active'] = false;
+            $validated['security_inactive_reason'] = 'لأسباب أمنية';
+        }
 
         $representative = $this->service->update($id, $validated);
         return redirect()->route('representatives.index')->with('success', 'تم تحديث المندوب بنجاح!');

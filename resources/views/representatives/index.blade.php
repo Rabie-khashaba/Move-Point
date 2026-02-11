@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'المندوبين')
+@section('title')
+المندوبين
+@endsection
 
 @section('content')
 <div class="nxl-content">
@@ -56,7 +58,7 @@
      <div id="collapseOne" class="accordion-collapse show  collapse page-header-collapse mb-4">
         <div class="accordion-body pb-2">
             <div class="row">
-                <div class="col-xxl-4 col-md-6 mb-3">
+                <div class="col-xxl-3 col-md-6 mb-3">
                     <div class="card">
                         <div class="card-body">
                             <div class="d-flex align-items-center justify-content-between">
@@ -73,10 +75,24 @@
                         </div>
                     </div>
                 </div>
+                    @php
+                        $companyCardStyles = [
+                            ['bg' => 'bg-primary', 'icon' => 'feather-user-check', 'text' => 'text-blue'],
+                            ['bg' => 'bg-info', 'icon' => 'feather-user-plus', 'text' => 'text-black'],
+                            ['bg' => 'bg-success', 'icon' => 'feather-briefcase', 'text' => 'text-success'],
+                            ['bg' => 'bg-warning', 'icon' => 'feather-award', 'text' => 'text-warning'],
+                            ['bg' => 'bg-secondary', 'icon' => 'feather-users', 'text' => 'text-secondary'],
+                            ['bg' => 'bg-danger', 'icon' => 'feather-alert-circle', 'text' => 'text-danger'],
+                        ];
+                        $stylesCount = count($companyCardStyles);
+                    @endphp
 
-                @foreach($companies as $index => $company)
-                        @php($style = $companyCardStyles[$index % count($companyCardStyles)])
-                        <div class="col-2 mb-3">
+                    @foreach($companies as $index => $company)
+                        @php
+                            $style = $companyCardStyles[$index % $stylesCount];
+                        @endphp
+
+                        <div class="col-3 mb-3">
                             <div class="card">
                                 <div class="card-body">
                                     <div class="d-flex align-items-center justify-content-between">
@@ -96,6 +112,8 @@
                             </div>
                         </div>
                     @endforeach
+
+
 
 
             </div>
@@ -138,6 +156,27 @@
                         </select>
                     </div>
                     <div class="col-md-2">
+                        <label class="form-label">المحافظة</label>
+                        <select name="governorate_id" id="filterGovernorateMain" class="form-control">
+                            <option value="">جميع المحافظات</option>
+                            @foreach(\App\Models\Governorate::all() as $governorate)
+                                <option value="{{ $governorate->id }}" {{ request('governorate_id') == $governorate->id ? 'selected' : '' }}>
+                                    {{ $governorate->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">المنطقة</label>
+                        <select name="location_id" id="filterLocationMain" class="form-control" data-current-location="{{ request('location_id') }}">
+                            <option value="">جميع المناطق</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        @php
+                            // جلب الموظفين اللي قسمهم رقم 7
+                            $employees = \App\Models\Employee::where('department_id', 7)->where('is_active',1)->get();
+                        @endphp
                         <label class="form-label">الموظفين</label>
                         <select name="employee_id" class="form-control">
                             <option value="">اختر موظف</option>
@@ -475,6 +514,44 @@ $.ajaxSetup({
 });
 
 $(document).ready(function() {
+    // Main filters: governorate/location
+    var $filterGovernorateMain = $('#filterGovernorateMain');
+    var $filterLocationMain = $('#filterLocationMain');
+
+    function loadMainLocations(governorateId, selectedLocationId) {
+        if (!governorateId) {
+            $filterLocationMain.empty().append('<option value="">جميع المناطق</option>');
+            return;
+        }
+
+        $.ajax({
+            url: '/getlocations/' + governorateId,
+            type: 'GET',
+            success: function(response) {
+                $filterLocationMain.empty().append('<option value="">جميع المناطق</option>');
+                response.forEach(function(location) {
+                    var option = new Option(location.name, location.id, false, false);
+                    if (String(location.id) === String(selectedLocationId)) {
+                        option.selected = true;
+                    }
+                    $filterLocationMain.append(option);
+                });
+            },
+            error: function() {
+                $filterLocationMain.empty().append('<option value="">خطأ في تحميل المناطق</option>');
+            }
+        });
+    }
+
+    $filterGovernorateMain.on('change', function() {
+        loadMainLocations($(this).val(), null);
+    });
+
+    // Initial load if governorate is selected
+    if ($filterGovernorateMain.val()) {
+        loadMainLocations($filterGovernorateMain.val(), $filterLocationMain.data('current-location'));
+    }
+
     // Handle modal data
     $('#transferModal').on('show.bs.modal', function (event) {
         var button = $(event.relatedTarget);

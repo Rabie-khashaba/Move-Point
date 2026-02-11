@@ -180,6 +180,23 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <label class="form-label">المحافظة</label>
+                        <select name="governorate_id" id="filterGovernorateMain" class="form-control">
+                            <option value="">جميع المحافظات</option>
+                            @foreach(\App\Models\Governorate::all() as $governorate)
+                                <option value="{{ $governorate->id }}" {{ request('governorate_id') == $governorate->id ? 'selected' : '' }}>
+                                    {{ $governorate->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">المنطقة</label>
+                        <select name="location_id" id="filterLocationMain" class="form-control" data-current-location="{{ request('location_id') }}">
+                            <option value="">جميع المناطق</option>
+                        </select>
+                    </div>
 
                     <div class="col-md-2">
                         <label class="form-label">المستند الناقص</label>
@@ -229,6 +246,8 @@
                             <option value="pending" {{ request('document_received') === 'pending' ? 'selected' : '' }}> لم  يتم  استلام الاوراق</option>
                         </select>
                     </div>
+
+
                     <div class="col-md-2">
                         <label class="form-label">الاستعلام</label>
                         <select name="inquiry_status" class="form-control">
@@ -238,7 +257,8 @@
                             <option value="bad" {{ request('inquiry_status') === 'bad' ? 'selected' : '' }}>سيء السمعة</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
+
+                     <div class="col-md-2">
                         <label class="form-label">كود المندوب</label>
                         <select name="code_status" class="form-control">
                             <option value="">جميع الحالات</option>
@@ -385,7 +405,7 @@
                                                             </button>
                                                         @endif
                                                     @endcan
-                                                    @can('view_representatives_btnStore')
+                                                  {{--  @can('view_representatives_btnStore')
                                                      <button type="button"
                                                                     class="btn btn-sm btn-warning"
                                                                     title="رسالة المخزن"
@@ -394,7 +414,7 @@
                                                                     data-id="{{ $representative->id }}">
                                                                 <i class="feather-clock"></i>
                                                             </button>
-                                                    @endcan
+                                                    @endcan --}}
                                                     @can('edit_representatives_no')
                                                        {{-- <button type="button"
                                                                 class="btn btn-sm btn-success"
@@ -896,6 +916,43 @@ $.ajaxSetup({
 });
 
 $(document).ready(function() {
+    // Main filters: governorate/location
+    var $filterGovernorateMain = $('#filterGovernorateMain');
+    var $filterLocationMain = $('#filterLocationMain');
+
+    function loadMainLocations(governorateId, selectedLocationId) {
+        if (!governorateId) {
+            $filterLocationMain.empty().append('<option value="">جميع المناطق</option>');
+            return;
+        }
+
+        $.ajax({
+            url: '/getlocations/' + governorateId,
+            type: 'GET',
+            success: function(response) {
+                $filterLocationMain.empty().append('<option value="">جميع المناطق</option>');
+                response.forEach(function(location) {
+                    var option = new Option(location.name, location.id, false, false);
+                    if (String(location.id) === String(selectedLocationId)) {
+                        option.selected = true;
+                    }
+                    $filterLocationMain.append(option);
+                });
+            },
+            error: function() {
+                $filterLocationMain.empty().append('<option value="">خطأ في تحميل المناطق</option>');
+            }
+        });
+    }
+
+    $filterGovernorateMain.on('change', function() {
+        loadMainLocations($(this).val(), null);
+    });
+
+    if ($filterGovernorateMain.val()) {
+        loadMainLocations($filterGovernorateMain.val(), $filterLocationMain.data('current-location'));
+    }
+
     // Handle modal data
     $('#transferModal').on('show.bs.modal', function (event) {
         var button = $(event.relatedTarget);

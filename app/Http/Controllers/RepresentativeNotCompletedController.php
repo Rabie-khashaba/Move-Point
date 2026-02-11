@@ -40,158 +40,11 @@ class RepresentativeNotCompletedController extends Controller
     {
         $this->authorize('view_representatives_no');
 
-//         $query = \App\Models\Representative::where('status', 0)->where('is_active',1)->with(['company', 'user', 'supervisors', 'location', 'governorate'])->withCount('deliveryDeposits');
-
-
-//         // Search filter
-//         if ($request->filled('search')) {
-//             $search = $request->search;
-//             $query->where(function($q) use ($search) {
-//                 $q->where('name', 'like', "%{$search}%")
-//                     ->orWhere('phone', 'like', "%{$search}%")
-//                     ->orWhere('code', 'like', "%{$search}%")
-//                     ->orWhere('national_id', 'like', "%{$search}%");
-//             });
-//         }
-
-//         if ($request->filled('date_from')) {
-//             $query->whereDate('start_date', '>=', $request->date_from);
-//         }
-
-//         if ($request->filled('date_to')) {
-//             $query->whereDate('start_date', '<=', $request->date_to);
-//         }
-
-//         // Company filter
-//         if ($request->filled('company_id')) {
-//             $query->where('company_id', $request->company_id);
-//         }
-
-//         if ($request->filled('missing_doc')) {
-//             $doc = $request->missing_doc;
-//         }
-
-//         // docs
-//         if ($request->filled('docs')) {
-//             $requiredCount = count(\App\Models\Representative::requiredDocs());
-
-//             if ($request->docs === 'completed') {
-//                 // عنده أوراق ناقصة (missingDocs > 0)
-//                 $query->whereRaw("JSON_LENGTH(attachments) < ?", [$requiredCount]);
-//             }
-
-//             if ($request->docs === 'NotCompleted') {
-//                 // مكتمل (missingDocs = 0)
-//                 $query->whereRaw("JSON_LENGTH(attachments) = ?", [$requiredCount]);
-//             }
-//         }
-
-//         // Training filter
-//         if ($request->filled('training')) {
-//             if ($request->training === 'attended') {
-//                 $query->where('is_training', 1);
-//             }
-
-//             if ($request->training === 'not_attended') {
-//                 $query->where('is_training', 0);
-//             }
-//         }
-
-//         // Ready filter
-//         // if ($request->filled('ready')) {
-//         //     if ($request->ready === 'ready') {
-//         //         $query->having('delivery_deposits_count', '=', 7);
-//         //     }
-
-//         //     if ($request->ready === 'not_ready') {
-//         //         $query->having('delivery_deposits_count', '<', 7);
-//         //     }
-//         // }
-
-//         if ($request->filled('ready')) {
-//             if ($request->ready === 'ready') {
-//                 $query->where('is_training', 1) // لازم يكون حضر التدريب
-//                       ->having('delivery_deposits_count', '=', 7); // 7 إيداعات
-//             }
-
-//             if ($request->ready === 'not_ready') {
-//                 $query->where(function ($q) {
-//                     $q->where('is_training', 0) // لسه ما حضرش
-//                       ->orHaving('delivery_deposits_count', '<', 7); // أقل من 7 إيداعات
-//                 });
-//             }
-//         }
-
-
-
-
-
-//         //$representatives = $query->paginate(20)->appends(request()->query());
-
-//         $representativesCollection = $query->get();
-
-//         if (!empty($doc)) {
-//             $representativesCollection = $representativesCollection->filter(function ($rep) use ($doc) {
-//                 return in_array($doc, $rep->missingDocs());
-//             });
-//         }
-
-//         // نرجع Pagination يدوي بعد الفلترة
-//         $page = request('page', 1);
-//         $perPage = 20;
-//         $total = $representativesCollection->count();
-//         $representatives = new \Illuminate\Pagination\LengthAwarePaginator(
-//             $representativesCollection->forPage($page, $perPage),
-//             $total,
-//             $perPage,
-//             $page,
-//             ['path' => request()->url(), 'query' => request()->query()]
-//         );
-
-
-//       // ---- الإحصائيات ----
-//         $totalNotCompleted = \App\Models\Representative::where('status', 0)
-//             ->when(request('date_from'), fn($q) => $q->whereDate('start_date', '>=', request('date_from')))
-//             ->when(request('date_to'), fn($q) => $q->whereDate('start_date', '<=', request('date_to')))
-//             ->count();
-
-// // الأوراق الناقصة
-//         $missingDocsCount = \App\Models\Representative::where('status', 0)
-//             ->when(request('date_from'), fn($q) => $q->whereDate('start_date', '>=', request('date_from')))
-//             ->when(request('date_to'), fn($q) => $q->whereDate('start_date', '<=', request('date_to')))
-//             ->get()
-//             ->filter(fn($rep) => count($rep->missingDocs()) > 0)
-//             ->count();
-
-// // لم يحضر
-//         $notTrainedCount = \App\Models\Representative::where('status', 0)
-//             ->when(request('date_from'), fn($q) => $q->whereDate('start_date', '>=', request('date_from')))
-//             ->when(request('date_to'), fn($q) => $q->whereDate('start_date', '<=', request('date_to')))
-//             ->where('is_training', 0)
-//             ->count();
-
-// // حضر
-//         $trainedCount = \App\Models\Representative::where('status', 0)
-//             ->when(request('date_from'), fn($q) => $q->whereDate('start_date', '>=', request('date_from')))
-//             ->when(request('date_to'), fn($q) => $q->whereDate('start_date', '<=', request('date_to')))
-//             ->where('is_training', 1)
-//             ->count();
-
-// // جاهز للعمل (تسليم 7 إيداعات)
-//         $readyToWorkCount = \App\Models\Representative::where('status', 0)
-//             ->withCount('deliveryDeposits')
-//             ->when(request('date_from'), fn($q) => $q->whereDate('start_date', '>=', request('date_from')))
-//             ->when(request('date_to'), fn($q) => $q->whereDate('start_date', '<=', request('date_to')))
-//             ->where('is_training', 1) // حضر التدريب
-//             ->get()
-//             ->filter(fn($rep) => $rep->delivery_deposits_count == 7 && count($rep->missingDocs()) === 0) // 7 إيداعات + الأوراق كاملة
-//             ->count();
-
 
 
         // Base Query (بدون علاقات – فقط الفلاتر الأساسية)
             $baseQuery = Representative::where('status', 0)
-               // ->where('is_active', 1)
+                //->where('is_active', 1)
                 ->when($request->filled('date_from'), fn($q) =>
                     $q->whereDate('start_date', '>=', $request->date_from)
                 )
@@ -200,6 +53,12 @@ class RepresentativeNotCompletedController extends Controller
                 )
                 ->when($request->filled('company_id'), fn($q) =>
                     $q->where('company_id', $request->company_id)
+                )
+                ->when($request->filled('governorate_id'), fn($q) =>
+                    $q->where('governorate_id', $request->governorate_id)
+                )
+                ->when($request->filled('location_id'), fn($q) =>
+                    $q->where('location_id', $request->location_id)
                 )
                 ->when($request->filled('employee_id'), fn($q) =>
                     $q->where('employee_id', $request->employee_id)
@@ -251,6 +110,26 @@ class RepresentativeNotCompletedController extends Controller
             }
 
             // --------------------------
+            //     Ready Filter
+            // --------------------------
+            if ($request->filled('ready')) {
+                $baseQuery->withCount('deliveryDeposits');
+
+                if ($request->ready === 'ready') {
+                    $baseQuery->where('is_training', 1)
+                              ->having('delivery_deposits_count', 7);
+                }
+
+                if ($request->ready === 'not_ready') {
+                    $baseQuery->where(function ($q) {
+                        $q->where('is_training', 0)
+                          ->orHaving('delivery_deposits_count', '<', 7);
+                    });
+                }
+            }
+
+
+             // --------------------------
             //     Inquiry Filter
             // --------------------------
             if ($request->filled('inquiry_status')) {
@@ -278,25 +157,6 @@ class RepresentativeNotCompletedController extends Controller
                             $qq->where('inquiry_field_result', 'bad')
                                ->orWhere('inquiry_security_result', 'has_judgments');
                         });
-                    });
-                }
-            }
-
-            // --------------------------
-            //     Ready Filter
-            // --------------------------
-            if ($request->filled('ready')) {
-                $baseQuery->withCount('deliveryDeposits');
-
-                if ($request->ready === 'ready') {
-                    $baseQuery->where('is_training', 1)
-                              ->having('delivery_deposits_count', 7);
-                }
-
-                if ($request->ready === 'not_ready') {
-                    $baseQuery->where(function ($q) {
-                        $q->where('is_training', 0)
-                          ->orHaving('delivery_deposits_count', '<', 7);
                     });
                 }
             }
@@ -411,6 +271,8 @@ class RepresentativeNotCompletedController extends Controller
             'code' => 'nullable|string|max:255',
             'attachments.*' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'inquiry_checkbox' => 'boolean',
+            'inquiry_data' => 'nullable|string|max:1000',
+
             'inquiry_type' => 'nullable|in:field,security',
             'inquiry_field_result' => 'required_if:inquiry_type,field|in:good,bad',
             'inquiry_field_notes' => 'nullable|string|max:1000',
@@ -418,7 +280,6 @@ class RepresentativeNotCompletedController extends Controller
             'inquiry_security_result' => 'required_if:inquiry_type,security|in:has_judgments,no_judgments',
             'inquiry_security_notes' => 'nullable|string|max:1000',
             'inquiry_security_attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
-            'inquiry_data' => 'nullable|string|max:1000',
             'governorate_id' => 'required|exists:governorates,id',
             'location_id' => 'required|exists:locations,id',
             'home_location' => 'nullable|url|max:500',
@@ -426,6 +287,8 @@ class RepresentativeNotCompletedController extends Controller
             'employee_id' => 'required|exists:users,id',
             'is_supervisor' => 'boolean', // ← أضفناها
         ]);
+
+
 
         $validated['inquiry_checkbox'] = !empty($validated['inquiry_type']);
 
@@ -467,46 +330,17 @@ class RepresentativeNotCompletedController extends Controller
     public function show($id)
     {
         $this->authorize('view_representatives_no');
+
         $representative = $this->service->find($id);
         $representative->load(['training', 'inquiry']);
-        $workStartDate = \App\Models\WorkStart::where('representative_id', $representative->id)
+
+
+         $workStartDate = \App\Models\WorkStart::where('representative_id', $representative->id)
             ->latest('date')
             ->value('date');
 
         $trainingDate = \App\Models\TrainingSession::where('representative_id', $representative->id)->first();
 
-
-
-
-
-        // Process attachments to include proper URLs
-//        if ($representative->attachments) {
-//            // Check if attachments is already an array or needs to be decoded
-//            if (is_string($representative->attachments)) {
-//                $attachments = json_decode($representative->attachments, true);
-//            } else {
-//                $attachments = $representative->attachments;
-//            }
-//
-//            if (is_array($attachments)) {
-//                $representative->attachments_with_urls = array_map(function($path) {
-//                    // Check if path is already a full URL
-//                    if (filter_var($path, FILTER_VALIDATE_URL)) {
-//                        return [
-//                            'path' => $path,
-//                            'url' => $path,
-//                            'src' => $path
-//                        ];
-//                    } else {
-//                        return [
-//                            'path' => $path,
-//                            'url' => asset('storage/app/public/' . $path),
-//                            'src' => asset('storage/app/public/' . $path)
-//                        ];
-//                    }
-//                }, $attachments);
-//            }
-//        }
 
         if ($representative->attachments) {
             // Decode إذا كان String
@@ -542,7 +376,7 @@ class RepresentativeNotCompletedController extends Controller
         }
 
 
-        return view('representativesNotCompleted.show', compact('representative', 'workStartDate','trainingDate'));
+        return view('representativesNotCompleted.show', compact('representative','workStartDate','trainingDate'));
     }
 
     public function downloadAttachment($id, $index)
@@ -579,84 +413,6 @@ class RepresentativeNotCompletedController extends Controller
     }
 
 
-    // public function viewAttachment($id, $index)
-    // {
-    //     try {
-    //         $this->authorize('view_representatives');
-    //         $representative = $this->service->find($id);
-
-    //         $attachments = null;
-    //         if ($representative->attachments) {
-    //             if (is_string($representative->attachments)) {
-    //                 $attachments = json_decode($representative->attachments, true);
-    //             } elseif (is_array($representative->attachments)) {
-    //                 $attachments = $representative->attachments;
-    //             }
-    //         }
-
-    //         if (!$attachments || !isset($attachments[$index])) {
-    //             abort(404, 'الملف غير موجود');
-    //         }
-
-    //         $attachment = $attachments[$index];
-
-    //         // Check if attachment is already a full URL
-    //         if (filter_var($attachment, FILTER_VALIDATE_URL)) {
-    //             // It's already a full URL, redirect directly
-    //             return redirect($attachment);
-    //         }
-
-    //         // Security: Ensure the attachment path is within the storage directory
-    //         $fixedAttachment = str_replace(['\\', '//'], ['/', '/'], $attachment);
-
-    //         // Basic security check to prevent directory traversal
-    //         if (strpos($fixedAttachment, '..') !== false || strpos($fixedAttachment, '/') === 0) {
-    //             abort(404, 'الملف غير موجود على الخادم');
-    //         }
-
-    //         // Check if file exists in public storage (where files are served from)
-    //         $publicPath = public_path('storage/app/public/' . $fixedAttachment);
-
-    //         if (!file_exists($publicPath)) {
-    //             // Try to find the file in different possible locations
-    //             $possiblePaths = [
-    //                 $fixedAttachment,
-    //                 'representatives/attachments/' . basename($fixedAttachment),
-    //                 'attachments/' . basename($fixedAttachment),
-    //                 basename($fixedAttachment)
-    //             ];
-
-    //             $foundPath = null;
-    //             foreach ($possiblePaths as $possiblePath) {
-    //                 $testPath = public_path('storage/' . $possiblePath);
-    //                 if (file_exists($testPath)) {
-    //                     $foundPath = $possiblePath;
-    //                     break;
-    //                 }
-    //             }
-
-    //             if ($foundPath) {
-
-    //                 $storageUrl = asset('storage/app/public/' . $foundPath);
-    //                 return redirect($storageUrl);
-    //             } else {
-    //                 abort(404, 'الملف غير موجود على الخادم');
-    //             }
-    //         }
-
-    //         // Return a redirect to the proper storage URL
-    //         $storageUrl = asset('storage/app/public/' . $fixedAttachment);
-    //         return redirect($storageUrl);
-    //     } catch (\Exception $e) {
-    //         \Log::error('Error viewing attachment: ' . $e->getMessage(), [
-    //             'representative_id' => $id,
-    //             'attachment_index' => $index,
-    //             'error' => $e->getMessage()
-    //         ]);
-    //         abort(500, 'حدث خطأ أثناء عرض الملف');
-    //     }
-    // }
-
 
 public function viewAttachment($id, $index)
 {
@@ -672,14 +428,16 @@ public function viewAttachment($id, $index)
             abort(404, 'الملف غير موجود');
         }
 
-        $path = $attachments[$index]['path'] ?? null;
-        $path = $path ? str_replace(['\\', '//'], ['/', '/'], $path) : null;
+        $attachment = $attachments[$index]['path'] ?? null;
 
-        if (!$path || !Storage::disk('public')->exists($path)) {
+        if (!$attachment) {
             abort(404, 'الملف غير موجود');
         }
 
-        return redirect(asset('storage/' . $path));
+        // توليد الرابط المباشر بدون أي تعديل
+        $url = url('storage/app/public/' . $attachment);
+
+        return redirect($url);
 
     } catch (\Exception $e) {
         \Log::error('Error viewing attachment: ' . $e->getMessage(), [
@@ -690,10 +448,12 @@ public function viewAttachment($id, $index)
         abort(500, 'حدث خطأ أثناء عرض الملف');
     }
 }
+
+
     public function viewInquiryAttachment($id, $type, $index)
     {
         try {
-            $this->authorize('view_representatives_no');
+           // $this->authorize('view_representatives_no');
             $representative = $this->service->find($id);
             $inquiry = $representative->inquiry;
 
@@ -711,13 +471,14 @@ public function viewAttachment($id, $index)
 
             $item = $attachments[$index];
             $path = is_array($item) ? ($item['path'] ?? null) : $item;
-            $path = $path ? str_replace(['\\', '//'], ['/', '/'], $path) : null;
 
             if (!$path || !Storage::disk('public')->exists($path)) {
                 abort(404, 'الملف غير موجود');
             }
 
-            return redirect(asset('storage/' . $path));
+           // return Storage::disk('public')->response($path);
+        return redirect(asset('storage/app/public/' . $path));
+
         } catch (\Exception $e) {
             \Log::error('Error viewing inquiry attachment: ' . $e->getMessage(), [
                 'representative_id' => $id,
@@ -727,6 +488,7 @@ public function viewAttachment($id, $index)
             abort(500, 'حدث خطأ أثناء عرض الملف');
         }
     }
+
 
     public function edit($id)
     {
@@ -763,6 +525,7 @@ public function viewAttachment($id, $index)
             'code' => 'nullable|string|max:255',
             'attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
             'inquiry_checkbox' => 'boolean',
+            'inquiry_data' => 'nullable|string|max:1000',
             'inquiry_type' => 'nullable|in:field,security',
             'inquiry_field_result' => 'required_if:inquiry_type,field|in:good,bad',
             'inquiry_field_notes' => 'nullable|string|max:1000',
@@ -770,7 +533,6 @@ public function viewAttachment($id, $index)
             'inquiry_security_result' => 'required_if:inquiry_type,security|in:has_judgments,no_judgments',
             'inquiry_security_notes' => 'nullable|string|max:1000',
             'inquiry_security_attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
-            'inquiry_data' => 'nullable|string|max:1000',
             'governorate_id' => 'required|exists:governorates,id',
             'location_id' => 'required|exists:locations,id',
             'home_location' => 'nullable|url|max:500',
@@ -803,6 +565,7 @@ public function viewAttachment($id, $index)
             $validated['is_active'] = false;
             $validated['security_inactive_reason'] = 'لأسباب أمنية';
         }
+
 
         $representative = $this->service->update($id, $validated);
         //return redirect()->route('representatives-not-completed.index')->with('success', 'تم تحديث المندوب بنجاح!');
@@ -855,14 +618,20 @@ public function viewAttachment($id, $index)
         $representative->status = 1; // جعلها 1 دائماً
         $representative->converted_to_active_date = now()->toDateString(); // إضافة تاريخ التحويل
         $representative->converted_active_by = auth()->id();
-
         $representative->save();
 
         // Get the message for WhatsApp
         $message = MessageWorking::find($request->message_id);
 
         // Send WhatsApp message with Google Maps URL
-        $whatsappResult = $this->whatsappService->send($representative->phone, $message->description, $request->date, $message->google_map_url , null);
+        //$whatsappResult = $this->whatsappService->send($representative->phone, $message->description, $request->date, $message->google_map_url , null);
+
+
+        $employee = auth()->user()?->employee;
+            $deviceToken = $employee?->device?->device_token;
+
+            $whatsapp = app(\App\Services\WhatsAppServicebyair::class);
+            $result = $whatsapp->send2($representative->phone, $message->description, $request->date, $message->google_map_url,null , $deviceToken);
 
         return back();
 
@@ -884,6 +653,7 @@ public function viewAttachment($id, $index)
         $representative->converted_to_active_date = $request->date; // إضافة تاريخ التحويل
         $representative->converted_to_notcompleted_date = null;
         $representative->converted_active_by = auth()->id();
+
 
 
         $representative->save();
@@ -948,14 +718,29 @@ public function viewAttachment($id, $index)
             'company_id'=>$request->company_id,
             ]);
         // إرسال الواتساب بالوصف والرابط المناسب
-        $whatsappResult = $this->whatsappService->send(
-            $representative->phone,
-            $description,
-            null,
-            $link,
-            $request->date,
+        // $whatsappResult = $this->whatsappService->send(
+        //     $representative->phone,
+        //     $description,
+        //     null,
+        //     $link,
+        //     $request->date,
 
-        );
+        // );
+
+
+
+        $employee = auth()->user()?->employee;
+            $deviceToken = $employee?->device?->device_token;
+
+            $whatsapp = app(\App\Services\WhatsAppServicebyair::class);
+            $result = $whatsapp->send2(
+                  $representative->phone,
+                  $description,
+                  null,
+                  $link,
+                  $request->date,
+                  $deviceToken
+            );
         return back();
     }
 
@@ -1066,6 +851,7 @@ public function viewAttachment($id, $index)
 
         $this->authorize('edit_representatives_no');
         $representative = $this->service->find($request->representative_id);
+
 
         $representative->update([
             'is_active' => 0 // حالة استقالة

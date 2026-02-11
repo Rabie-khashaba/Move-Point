@@ -262,15 +262,8 @@
 
                         <div class="col-md-2">
                             <label class="form-label">المنطقة</label>
-                            <select name="location_id" id="location_id" class="form-control">
+                            <select name="location_id" id="location_id" class="form-control" data-current-location="{{ request('location_id') }}">
                                 <option value="">جميع المناطق</option>
-                                @foreach(\App\Models\Location::all() as $location)
-                                    <option value="{{ $location->id }}"
-                                        data-governorate="{{ $location->governorate_id }}"
-                                        {{ request('location_id') == $location->id ? 'selected' : '' }}>
-                                        {{ $location->name }}
-                                    </option>
-                                @endforeach
                             </select>
                         </div>
 
@@ -616,36 +609,40 @@
     <script>
 
         document.addEventListener('DOMContentLoaded', function () {
-        const allLocationOptions = $('#location_id').html();
+        const $governorateSelect = $('#governorate_id');
+        const $locationSelect = $('#location_id');
 
-        $('#governorate_id').on('change', function () {
-            const governorateId = $(this).val();
-            const locationSelect = $('#location_id');
-
-            locationSelect.html(allLocationOptions);
-
-            if (governorateId) {
-                locationSelect.find('option').each(function () {
-                    const option = $(this);
-                    const optionGovernorate = option.data('governorate');
-                    if (option.val() !== '' && optionGovernorate != governorateId) {
-                        option.remove();
-                    }
-                });
+        function loadLocations(governorateId, selectedLocationId) {
+            if (!governorateId) {
+                $locationSelect.empty().append('<option value="">جميع المناطق</option>');
+                return;
             }
 
-            locationSelect.val('').trigger('change');
+            $.ajax({
+                url: '/getlocations/' + governorateId,
+                type: 'GET',
+                success: function (response) {
+                    $locationSelect.empty().append('<option value="">جميع المناطق</option>');
+                    response.forEach(function (location) {
+                        var option = new Option(location.name, location.id, false, false);
+                        if (String(location.id) === String(selectedLocationId)) {
+                            option.selected = true;
+                        }
+                        $locationSelect.append(option);
+                    });
+                },
+                error: function () {
+                    $locationSelect.empty().append('<option value="">خطأ في تحميل المناطق</option>');
+                }
+            });
+        }
+
+        $governorateSelect.on('change', function () {
+            loadLocations($(this).val(), null);
         });
 
-        const initialGovernorateId = "{{ request('governorate_id') }}";
-        const initialLocationId = "{{ request('location_id') }}";
-        if (initialGovernorateId) {
-            $('#governorate_id').trigger('change');
-            if (initialLocationId) {
-                setTimeout(function () {
-                    $('#location_id').val(initialLocationId).trigger('change');
-                }, 100);
-            }
+        if ($governorateSelect.val()) {
+            loadLocations($governorateSelect.val(), $locationSelect.data('current-location'));
         }
 
         var interviewModal = document.getElementById('interviewModal');

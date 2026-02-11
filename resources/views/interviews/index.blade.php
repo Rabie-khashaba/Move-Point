@@ -56,7 +56,6 @@
             color: #333;
             margin-bottom: 10px;
         }
-
 </style>
 <div class="nxl-content small">
     <!-- [ page-header ] start -->
@@ -78,144 +77,140 @@
             <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
                 <i class="feather-filter me-1"></i> الفلترة
             </button>
-
-
         </div>
     </div>
     <!-- [ page-header ] end -->
 
-        <div id="collapseOne" class="accordion-collapse show collapse page-header-collapse mb-4">
-            <div class="accordion-body pb-2">
-                <label class="fw-bold mb-3 d-block">الإحصائيات:</label>
+     <div id="collapseOne" class="accordion-collapse show collapse page-header-collapse mb-4">
+    <div class="accordion-body pb-2">
+        <label class="fw-bold mb-3 d-block">الإحصائيات:</label>
 
-                <div class="d-flex flex-nowrap overflow-auto gap-3">
+        <div class="d-flex flex-nowrap overflow-auto gap-3">
 
-                    {{-- الإجمالي --}}
-                    <div class="card" style="min-width: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="avatar-text avatar-xl rounded">
-                                    <i class="feather-users"></i>
-                                </div>
-                                <div>
-                                    <span class="d-block fw-bold">الإجمالي</span>
-                                    <span class="fs-24 fw-bolder" id="totalLeads">{{ $totalInterviews }}</span>
-                                </div>
-                            </div>
+            {{-- الإجمالي --}}
+            <div class="card" style="min-width: 200px;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-text avatar-xl rounded">
+                            <i class="feather-users"></i>
+                        </div>
+                        <div>
+                            <span class="d-block fw-bold">الإجمالي</span>
+                            <span class="fs-24 fw-bolder" id="totalLeads">{{ $totalInterviews }}</span>
                         </div>
                     </div>
-
-                    {{-- غير مهتم --}}
-                    <div class="card" style="min-width: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="avatar-text avatar-xl rounded bg-primary text-white">
-                                    <i class="feather-user-check"></i>
-                                </div>
-                                <div>
-                                    <span class="d-block fw-bold">غير مهتم</span>
-                                    <span class="fs-24 fw-bolder">{{ $notInterestedCount }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- موافق على العمل --}}
-                    <div class="card" style="min-width: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="avatar-text avatar-xl rounded bg-info text-white">
-                                    <i class="feather-user-plus"></i>
-                                </div>
-                                <div>
-                                    <span class="d-block fw-bold">موافق</span>
-                                    <span class="fs-24 fw-bolder">{{ $acceptedCount }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- هيفكر --}}
-                    <div class="card" style="min-width: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="avatar-text avatar-xl rounded bg-warning text-white">
-                                    <i class="feather-help-circle"></i>
-                                </div>
-                                <div>
-                                    <span class="d-block fw-bold">هيفكر</span>
-                                    <span class="fs-24 fw-bolder">{{ $thinkingCount }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- لم يرد --}}
-                    <div class="card" style="min-width: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="avatar-text avatar-xl rounded bg-secondary text-white">
-                                    <i class="feather-phone-off"></i>
-                                </div>
-                                <div>
-                                    <span class="d-block fw-bold">لم يرد</span>
-                                    <span class="fs-24 fw-bolder">{{ $noResponseCount }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- لم يحضر --}}
-                    <div class="card" style="min-width: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="avatar-text avatar-xl rounded bg-danger text-white">
-                                    <i class="feather-user-x"></i>
-                                </div>
-                                <div>
-                                    <span class="d-block fw-bold">لم يحضر</span>
-                                    <span class="fs-24 fw-bolder">{{ $absentCount }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- المتابعة مرة أخرى --}}
-                    <div class="card" style="min-width: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="avatar-text avatar-xl rounded bg-success text-white">
-                                    <i class="feather-repeat"></i>
-                                </div>
-                                <div>
-                                    <span class="d-block fw-bold">متابعة مرة أخرى</span>
-                                    <span class="fs-24 fw-bolder">{{ $followUpNextTimeCount }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card" style="min-width: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="avatar-text avatar-xl rounded bg-success text-white">
-                                    <i class="feather-repeat"></i>
-                                </div>
-                                <div>
-                                    <span class="d-block fw-bold">غير محدد</span>
-                                    <span class="fs-24 fw-bolder">{{ $undefinedCount }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-
-
                 </div>
             </div>
+
+            {{-- غير مهتم --}}
+            <div class="card" style="min-width: 200px;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-text avatar-xl rounded bg-primary text-white">
+                            <i class="feather-user-check"></i>
+                        </div>
+                        <div>
+                            <span class="d-block fw-bold">غير مهتم</span>
+                            <span class="fs-24 fw-bolder">{{ $notInterestedCount }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- موافق على العمل --}}
+            <div class="card" style="min-width: 200px;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-text avatar-xl rounded bg-info text-white">
+                            <i class="feather-user-plus"></i>
+                        </div>
+                        <div>
+                            <span class="d-block fw-bold">موافق</span>
+                            <span class="fs-24 fw-bolder">{{ $acceptedCount }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- هيفكر --}}
+            <div class="card" style="min-width: 200px;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-text avatar-xl rounded bg-warning text-white">
+                            <i class="feather-help-circle"></i>
+                        </div>
+                        <div>
+                            <span class="d-block fw-bold">هيفكر</span>
+                            <span class="fs-24 fw-bolder">{{ $thinkingCount }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- لم يرد --}}
+            <div class="card" style="min-width: 200px;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-text avatar-xl rounded bg-secondary text-white">
+                            <i class="feather-phone-off"></i>
+                        </div>
+                        <div>
+                            <span class="d-block fw-bold">لم يرد</span>
+                            <span class="fs-24 fw-bolder">{{ $noResponseCount }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- لم يحضر --}}
+            <div class="card" style="min-width: 200px;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-text avatar-xl rounded bg-danger text-white">
+                            <i class="feather-user-x"></i>
+                        </div>
+                        <div>
+                            <span class="d-block fw-bold">لم يحضر</span>
+                            <span class="fs-24 fw-bolder">{{ $absentCount }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- المتابعة مرة أخرى --}}
+            <div class="card" style="min-width: 200px;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-text avatar-xl rounded bg-success text-white">
+                            <i class="feather-repeat"></i>
+                        </div>
+                        <div>
+                            <span class="d-block fw-bold">متابعة مرة أخرى</span>
+                            <span class="fs-24 fw-bolder">{{ $followUpNextTimeCount }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="min-width: 200px;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-text avatar-xl rounded bg-success text-white">
+                            <i class="feather-repeat"></i>
+                        </div>
+                        <div>
+                            <span class="d-block fw-bold">غير محدد</span>
+                            <span class="fs-24 fw-bolder">{{ $undefinedCount }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
         </div>
-
-
+    </div>
+</div>
 
     <!-- Filter Collapse -->
     <div class="collapse show" id="filterCollapse">
@@ -252,7 +247,7 @@
                     <div class="col-md-2">
                         <label class="form-label">الموظف</label>
                         <select name="employee_id" class="form-control">
-                            <option value="" selected disabled>اختر الموظف</option>
+                            <option selected disabled>اختر الموظف</option>
                             @foreach($employees as $employee)
                                 <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
                                     {{ $employee->employee?->name ?? $employee->name }}
@@ -263,13 +258,20 @@
 
                     <div class="col-md-2">
                         <label class="form-label">المحافظة</label>
-                        <select name="governorate_id" class="form-control">
+                        <select name="governorate_id" id="filterGovernorateMain" class="form-control">
                             <option value="" selected disabled>اختر المحافظة</option>
                             @foreach($governorates as $governorate)
                                 <option value="{{ $governorate->id }}" {{ request('governorate_id') == $governorate->id ? 'selected' : '' }}>
                                     {{ $governorate->name}}
                                 </option>
                             @endforeach
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">المنطقة</label>
+                        <select name="location_id" id="filterLocationMain" class="form-control" data-current-location="{{ request('location_id') }}">
+                            <option value="" selected disabled>اختر المنطقة</option>
                         </select>
                     </div>
 
@@ -524,7 +526,7 @@
                                                                         class="btn btn-sm text-white m-1"
                                                                         style="background-color: black; border-color: black;"
                                                                         onclick="window.location.href='{{ route('representatives.create', ['lead_id' => $interview->lead_id]) }}'"
-                                                                        title="إضافة ممثل">
+                                                                        title="إضافه مندوب">
                                                                     <i class="feather-user-plus me-1"></i> <!-- أيقونة + مسافة بسيطة -->
                                                                 </button>
                                                             @endif
@@ -613,6 +615,7 @@
                             <small class="text-muted">يمكن اختيار المحافظة فقط أو المحافظة والمنطقة معاً</small>
                         </div>
 
+
                         {{-- -المشرفين --}}
                         <div class="col-md-6 mb-3">
                             <label class="form-label">المشرفين</label>
@@ -623,11 +626,13 @@
                             <small class="text-muted">اختر مشرف المنطقة المختارة</small>
                         </div>
 
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label">تاريخ المقابلة</label>
                             <input type="datetime-local" name="date_interview" class="form-control" required>
                         </div>
+
+
+
                         <div class="col-md-6 mb-3">
                             <label class="form-label">الرسالة</label>
                             <select name="message_id" id="interview_message_id" class="form-control select2" required>
@@ -888,6 +893,44 @@ function deleteInterview(interviewId) {
 
 // Handle status change in follow-up modal
 document.addEventListener('DOMContentLoaded', function() {
+    const filterGovernorateMain = document.getElementById('filterGovernorateMain');
+    const filterLocationMain = document.getElementById('filterLocationMain');
+
+    function loadMainLocations(governorateId, selectedLocationId) {
+        if (!filterLocationMain) return;
+        if (!governorateId) {
+            filterLocationMain.innerHTML = '<option value="" selected disabled>اختر المنطقة</option>';
+            return;
+        }
+
+        fetch(`{{ url('getlocations') }}/${governorateId}`)
+            .then(res => res.json())
+            .then(data => {
+                filterLocationMain.innerHTML = '<option value="" selected disabled>اختر المنطقة</option>';
+                data.forEach(loc => {
+                    const option = document.createElement('option');
+                    option.value = loc.id;
+                    option.textContent = loc.name;
+                    if (String(loc.id) === String(selectedLocationId)) {
+                        option.selected = true;
+                    }
+                    filterLocationMain.appendChild(option);
+                });
+            })
+            .catch(() => {
+                filterLocationMain.innerHTML = '<option value="">خطأ في تحميل المناطق</option>';
+            });
+    }
+
+    if (filterGovernorateMain) {
+        filterGovernorateMain.addEventListener('change', function() {
+            loadMainLocations(this.value, null);
+        });
+        if (filterGovernorateMain.value) {
+            loadMainLocations(filterGovernorateMain.value, filterLocationMain ? filterLocationMain.dataset.currentLocation : null);
+        }
+    }
+
     const interviewModal = document.getElementById('interviewModal');
     interviewModal.addEventListener('show.bs.modal', function (event) {
         let button = event.relatedTarget; // الزرار اللي ضغط عليه
@@ -1032,8 +1075,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-
-    function loadSupervisors(governorateId, locationId) {
+      function loadSupervisors(governorateId, locationId) {
         const supervisorSelect = document.getElementById('interview_supervisor_id');
         if (!supervisorSelect) return;
 
@@ -1047,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 supervisorSelect.innerHTML = '<option value="">اختر المشرف</option>';
                 data.forEach(sup => {
-                    supervisorSelect.innerHTML += `<option value="${sup.id}">${sup.name}</option>`;
+                    supervisorSelect.innerHTML += `<option value="${sup.user_id}">${sup.name}</option>`;
                 });
             })
             .catch(err => {
@@ -1070,10 +1112,6 @@ document.addEventListener('DOMContentLoaded', function() {
         loadMessagesForGovernmentAndLocation(governorateId, locationId);
         loadSupervisors(governorateId, locationId);
     });
-
-
-
-
 
 
 });
@@ -1340,7 +1378,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (checkAllEl) checkAllEl.checked = false;
         });
     });
-
 
 });
 </script>

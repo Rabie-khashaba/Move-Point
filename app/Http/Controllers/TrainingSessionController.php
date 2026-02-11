@@ -10,6 +10,7 @@ use App\Models\Governorate;
 use App\Models\Location;
 use App\Models\Message;
 use App\Models\WorkStart;
+use App\Models\Company;
 use App\Models\WaitingRepresentative;
 use App\Models\TrainingSessionPostpone;
 use App\Services\WhatsAppWorkService;
@@ -122,6 +123,13 @@ class TrainingSessionController extends Controller
             ->where('is_active', 0)
             ->count();
 
+        $companies = Company::orderBy('name')->get();
+        $companyCounts = \App\Models\Representative::whereIn('id', $representativeIds)
+            ->select('company_id', \DB::raw('count(*) as total'))
+            ->groupBy('company_id')
+            ->pluck('total', 'company_id')
+            ->toArray();
+
 
 
         return view('training_sessions.index', compact(
@@ -130,6 +138,8 @@ class TrainingSessionController extends Controller
             'attendedRepresentatives',
             'notAttendedRepresentatives',
             'inactiveRepresentatives',
+            'companies',
+            'companyCounts',
             'latestPostponeReasons'
         ));
     }

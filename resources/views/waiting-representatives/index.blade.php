@@ -62,6 +62,29 @@
                             </div>
                         </div>
                     </div>
+                    @foreach($companies as $index => $company)
+                        @php($style = $companyCardStyles[$index % count($companyCardStyles)])
+                        <div class="col-2 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="avatar-text avatar-xl rounded {{ $style['bg'] }}">
+                                                <i class="{{ $style['icon'] }}"></i>
+                                            </div>
+                                            <a href="javascript:void(0);" class="fw-bold d-block {{ $style['text'] }}">
+                                                <span class="d-block">{{ $company->name }}</span>
+                                                <span class="fs-24 fw-bolder d-block">
+                                                    {{ $companyCounts[$company->id] ?? 0 }}
+                                                </span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                    {{--
                     <div class="col-xxl-2 col-md-4 mb-3">
                         <div class="card">
                             <div class="card-body">
@@ -98,6 +121,7 @@
                             </div>
                         </div>
                     </div>
+                    --}}
 
                     <div class="col-xxl-2 col-md-4 mb-3">
                         <div class="card">

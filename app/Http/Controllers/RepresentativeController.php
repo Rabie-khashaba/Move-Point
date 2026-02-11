@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Representative;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\RepresentativesExport;
 
@@ -170,8 +171,36 @@ class RepresentativeController extends Controller
                 ->where('company_id', 10)
                 ->count();
 
+            $companies = Company::orderBy('name')->get();
+            $companyCounts = (clone $baseQuery)
+                ->select('company_id', DB::raw('count(*) as total'))
+                ->groupBy('company_id')
+                ->pluck('total', 'company_id')
+                ->toArray();
 
-        return view('representatives.index', compact('representatives','totalRepresentatives','NoonRepresentatives','boostaRepresentatives'));
+            $companyCardStyles = [
+                ['bg' => 'bg-primary', 'icon' => 'feather-user-check', 'text' => 'text-blue'],
+                ['bg' => 'bg-info', 'icon' => 'feather-user-plus', 'text' => 'text-black'],
+                ['bg' => 'bg-success', 'icon' => 'feather-briefcase', 'text' => 'text-success'],
+                ['bg' => 'bg-warning', 'icon' => 'feather-award', 'text' => 'text-warning'],
+                ['bg' => 'bg-secondary', 'icon' => 'feather-users', 'text' => 'text-secondary'],
+                ['bg' => 'bg-danger', 'icon' => 'feather-alert-circle', 'text' => 'text-danger'],
+            ];
+
+            $employees = \App\Models\Employee::where('department_id', 7)
+                ->where('is_active', 1)
+                ->get();
+
+        return view('representatives.index', compact(
+            'representatives',
+            'totalRepresentatives',
+            'NoonRepresentatives',
+            'boostaRepresentatives',
+            'companies',
+            'companyCounts',
+            'companyCardStyles',
+            'employees'
+        ));
     }
 
     public function create(Request $request)

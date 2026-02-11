@@ -8,6 +8,7 @@ use App\Models\WaitingRepresentative;
 use App\Models\WorkStart;
 use App\Models\WaitingRepresentativeFollowup;
 use App\Models\TrainingSessionPostpone;
+use App\Models\Company;
 use Illuminate\Http\Request;
 use App\Services\WhatsAppWorkService;
 use Illuminate\Support\Facades\DB;
@@ -120,6 +121,13 @@ class WaitingRepresentativeController extends Controller
             ->where('company_id', 10)
             ->count();
 
+        $companies = Company::orderBy('name')->get();
+        $companyCounts = \App\Models\Representative::whereIn('id', $representativeIds)
+            ->select('company_id', DB::raw('count(*) as total'))
+            ->groupBy('company_id')
+            ->pluck('total', 'company_id')
+            ->toArray();
+
         $postponeReasonCounts = TrainingSessionPostpone::query()
             ->leftJoin('training_sessions', 'training_sessions.id', '=', 'training_session_postpones.training_session_id')
             ->leftJoin('work_starts', 'work_starts.id', '=', 'training_session_postpones.work_start_id')
@@ -169,18 +177,30 @@ class WaitingRepresentativeController extends Controller
             ->map(fn($items) => $items->first()?->follow_up_date)
             ->toArray();
 
+        $companyCardStyles = [
+            ['bg' => 'bg-primary', 'icon' => 'feather-user-check', 'text' => 'text-blue'],
+            ['bg' => 'bg-info', 'icon' => 'feather-user-plus', 'text' => 'text-black'],
+            ['bg' => 'bg-success', 'icon' => 'feather-briefcase', 'text' => 'text-success'],
+            ['bg' => 'bg-warning', 'icon' => 'feather-award', 'text' => 'text-warning'],
+            ['bg' => 'bg-secondary', 'icon' => 'feather-users', 'text' => 'text-secondary'],
+            ['bg' => 'bg-danger', 'icon' => 'feather-alert-circle', 'text' => 'text-danger'],
+        ];
+
         return view('waiting-representatives.index', compact(
             'waitings',
             'totalRepresentatives',
             'NoonRepresentatives',
             'BoostaRepresentatives',
+            'companies',
+            'companyCounts',
             'postponeReasonSick',
             'postponeReasonZoneClosed',
             'postponeReasonOther',
             'latestPostponeReasons',
             'latestFollowupStatuses',
             'latestFollowupDates',
-            'latestPostponeDates'
+            'latestPostponeDates',
+            'companyCardStyles'
         ));
     }
 

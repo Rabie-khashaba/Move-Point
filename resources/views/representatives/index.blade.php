@@ -27,25 +27,21 @@
                     <a href="javascript:void(0);" class="btn btn-icon btn-light-brand" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
                         <i class="feather-filter"></i>
                     </a>
-
                     <a href="{{ route('representatives.export', request()->query()) }}" class="btn btn-success">
                         <i class="feather-download me-2"></i> تصدير Excel
                     </a>
-
                     @can('view_supervisors')
                     <a href="{{ route('supervisor-transfer-logs.index') }}" class="btn btn-info me-2">
                         <i class="feather-activity me-2"></i>
                         <span>سجل النقل</span>
                     </a>
                     @endcan
-
-                    @can('create_representatives')
+                   {{-- @can('create_representatives')
                     <a href="{{ route('representatives.create') }}" class="btn btn-primary">
                         <i class="feather-plus me-2"></i>
                         <span>إضافة مندوب</span>
                     </a>
-                    @endcan
-
+                    @endcan  --}}
                 </div>
             </div>
             <div class="d-md-none d-flex align-items-center">
@@ -57,7 +53,7 @@
     </div>
     <!-- [ page-header ] end -->
 
-    <div id="collapseOne" class="accordion-collapse show  collapse page-header-collapse mb-4">
+     <div id="collapseOne" class="accordion-collapse show  collapse page-header-collapse mb-4">
         <div class="accordion-body pb-2">
             <div class="row">
                 <div class="col-xxl-4 col-md-6 mb-3">
@@ -77,40 +73,29 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-xxl-4 col-md-6 mb-3">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar-text avatar-xl rounded bg-primary">
-                                        <i class="feather-user-check"></i>
+
+                @foreach($companies as $index => $company)
+                        @php($style = $companyCardStyles[$index % count($companyCardStyles)])
+                        <div class="col-2 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="avatar-text avatar-xl rounded {{ $style['bg'] }}">
+                                                <i class="{{ $style['icon'] }}"></i>
+                                            </div>
+                                            <a href="javascript:void(0);" class="fw-bold d-block {{ $style['text'] }}">
+                                                <span class="d-block">{{ $company->name }}</span>
+                                                <span class="fs-24 fw-bolder d-block">
+                                                    {{ $companyCounts[$company->id] ?? 0 }}
+                                                </span>
+                                            </a>
+                                        </div>
                                     </div>
-                                    <a href="javascript:void(0);" class="fw-bold d-block text-blue">
-                                        <span class="d-block">عدد في شركه  بوسطه</span>
-                                        <span class="fs-24 fw-bolder d-block" id="activeLeads">{{$boostaRepresentatives}}</span>
-                                    </a>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-                <div class="col-xxl-4 col-md-6 mb-3">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar-text avatar-xl rounded bg-info">
-                                        <i class="feather-user-plus"></i>
-                                    </div>
-                                    <a href="javascript:void(0);" class="fw-bold d-block text-black">
-                                        <span class="d-block">العدد في شركه نون</span>
-                                        <span class="fs-24 fw-bolder d-block" id="qualifiedLeads">{{$NoonRepresentatives}}</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    @endforeach
 
 
             </div>
@@ -153,15 +138,11 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        @php
-                            // جلب الموظفين اللي قسمهم رقم 7
-                            $employees = \App\Models\Employee::where('department_id', 7)->where('is_active',1)->get();
-                        @endphp
                         <label class="form-label">الموظفين</label>
                         <select name="employee_id" class="form-control">
                             <option value="">اختر موظف</option>
                             @foreach ($employees as $employee)
-                                <option value="{{ $employee->user_id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
+                                <option value="{{ $employee->user_id }}" {{ request('employee_id') == $employee->user_id ? 'selected' : '' }}>
                                     {{ $employee->name }}
                                 </option>
                             @endforeach
@@ -176,6 +157,7 @@
                             <option value="pending" {{ request('document_received') === 'pending' ? 'selected' : '' }}> لم  يتم  استلام الاوراق</option>
                         </select>
                     </div>
+
                     <div class="col-md-2">
                         <label class="form-label">الاستعلام</label>
                         <select name="inquiry_status" class="form-control">
@@ -185,6 +167,7 @@
                             <option value="bad" {{ request('inquiry_status') === 'bad' ? 'selected' : '' }}>سيء السمعة</option>
                         </select>
                     </div>
+
                     <div class="col-md-2">
                         <label class="form-label">كود المندوب</label>
                         <select name="code_status" class="form-control">
@@ -193,6 +176,7 @@
                             <option value="without" {{ request('code_status') === 'without' ? 'selected' : '' }}>لا يمتلك كود</option>
                         </select>
                     </div>
+
                     <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2">تصفية</button>
                         <a href="{{ route('representatives.index') }}" class="btn btn-light">مسح</a>
@@ -201,7 +185,6 @@
             </div>
         </div>
     </div>
-
     <!-- [ Main Content ] start -->
     <div class="main-content">
         <div class="row">
@@ -228,7 +211,7 @@
                                             <th>الشركة التي يعمل بها</th>
                                             <th>كود المندوب في الشركة</th>
                                             <th>المشرف المسؤول</th>
-                                            <th>القائم  بالتحويل</th>
+                                            <th>القائم بالتحويل</th>
                                             <th>عدد الايصالات</th>
                                             <th>الأوراق الناقصه</th>
                                             <th>استلام الاوراق</th>
@@ -245,17 +228,17 @@
                                                     </div>
                                                     <div>
                                                         <h6 class="mb-0">{{ $representative->name }}</h6>
-                                                        <small class="text-muted">رقم البطاقة: {{ $representative->phone ?? 'غير محدد' }}</small>
+                                                        <small class="text-muted">رقم التليفون: {{ $representative->phone ?? 'غير محدد' }}</small>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td>
-                                                {{-- <div class="d-flex align-items-center">
+                                               {{-- <div class="d-flex align-items-center">
                                                     <i class="feather-phone me-2 text-muted"></i>
                                                     <a href="tel:{{ $representative->phone }}" class="text-decoration-none">{{ $representative->phone }}</a>
                                                 </div> --}}
-                                                {{ $representative->employee->name ?? 'غير محدد' }}
 
+                                                {{ $representative->employee->name ?? 'غير محدد'}}
                                             </td>
                                             <td>
                                                 <span class="badge bg-info">{{ $representative->company->name ?? 'غير محدد' }}</span>
@@ -276,7 +259,8 @@
                                                      <span class="badge bg-secondary">غير محدد</span>
                                                  @endif
                                              </td>
-                                            <td>
+
+                                             <td>
                                                 @if($representative->convertedActiveBy)
                                                     <div>
                                                         <span class="badge bg-info">{{ $representative->convertedActiveBy->name }}</span>
@@ -285,11 +269,11 @@
                                                     <span class="badge bg-secondary">غير محدد</span>
                                                 @endif
                                             </td>
-                                            <td>
-                                                <span class="badge bg-primary">{{ $representative->delivery_deposits_count }}</span>
+                                             <td>
+                                                 <span class="badge bg-primary">{{ $representative->delivery_deposits_count }}</span>
+                                             </td>
 
-                                            </td>
-                                            <td>
+                                             <td>
                                                 @if(count($representative->missingDocs()) > 0)
                                                     @foreach($representative->missingDocs() as $doc)
                                                             <span>{{ $doc }}</span><br>
@@ -310,7 +294,6 @@
                                                @endif
                                             </td>
                                             <td>
-
                                                 <div class="d-flex gap-2">
                                                     @can('view_representatives')
                                                     <a href="{{ route('representatives.show', $representative->id) }}" class="btn btn-sm btn-outline-primary" title="عرض">
@@ -323,7 +306,7 @@
                                                     </a>
                                                     @endcan
                                                     @can('edit_supervisors')
-                                                                                                         <button type="button" class="btn btn-sm btn-outline-info"
+                                                    <button type="button" class="btn btn-sm btn-outline-info"
                                                              data-bs-toggle="modal"
                                                              data-bs-target="#transferModal"
                                                              data-representative-id="{{ $representative->id }}"
@@ -333,7 +316,7 @@
                                                         <i class="feather-users"></i>
                                                     </button>
                                                     @endcan
-                                                    @can('edit_representatives')
+                                                  {{--  @can('edit_representatives')
                                                     <form action="{{ route('representatives.toggle-status', $representative->id) }}" method="POST" style="display: inline;">
                                                         @csrf
                                                         <button type="submit" class="btn btn-sm btn-outline-{{ $representative->is_active ? 'danger' : 'success' }}"
@@ -342,7 +325,9 @@
                                                             <i class="feather-{{ $representative->is_active ? 'pause' : 'play' }}"></i>
                                                         </button>
                                                     </form>
-                                                    @endcan
+
+
+                                                    @endcan --}}
 
                                                     @can('edit_representatives')
                                                     <form action="{{ route('representatives.mark-not-completed', $representative->id) }}" method="POST" style="display: inline;" onsubmit="return confirm('هل أنت متأكد من تحويل المندوب إلى غير مكتمل؟');">
@@ -353,7 +338,7 @@
                                                     </form>
                                                     @endcan
 
-                                                    <form method="POST"
+                                                <form method="POST"
       action="{{ route('representatives.toggleDocumentsStatus', $representative->id) }}"
       class="d-inline">
     @csrf
@@ -399,11 +384,8 @@
                                 <div class="avatar-text avatar-xl mx-auto mb-3">
                                     <i class="feather-user-plus"></i>
                                 </div>
-                                <h5>لا توجد مندوبين</h5>
-                                <p class="text-muted">ابدأ بإضافة أول مندوب.</p>
-                                <a href="{{ route('representatives.create') }}" class="btn btn-primary">
-                                    <i class="feather-plus me-2"></i>إضافة مندوب
-                                </a>
+                                <h5>لا توجد نتائج</h5>
+
                             </div>
                         @endif
                     </div>

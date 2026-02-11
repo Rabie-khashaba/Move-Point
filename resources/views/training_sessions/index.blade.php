@@ -123,6 +123,39 @@
                     </div>
 
 
+                    @php
+                        $companyCardStyles = [
+                            ['bg' => 'bg-primary', 'icon' => 'feather-user-check', 'text' => 'text-blue'],
+                            ['bg' => 'bg-info', 'icon' => 'feather-user-plus', 'text' => 'text-black'],
+                            ['bg' => 'bg-success', 'icon' => 'feather-briefcase', 'text' => 'text-success'],
+                            ['bg' => 'bg-warning', 'icon' => 'feather-award', 'text' => 'text-warning'],
+                            ['bg' => 'bg-secondary', 'icon' => 'feather-users', 'text' => 'text-secondary'],
+                            ['bg' => 'bg-danger', 'icon' => 'feather-alert-circle', 'text' => 'text-danger'],
+                        ];
+                    @endphp
+                    @foreach($companies as $index => $company)
+                        @php($style = $companyCardStyles[$index % count($companyCardStyles)])
+                        <div class="col-3 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="avatar-text avatar-xl rounded {{ $style['bg'] }}">
+                                                <i class="{{ $style['icon'] }}"></i>
+                                            </div>
+                                            <a href="javascript:void(0);" class="fw-bold d-block {{ $style['text'] }}">
+                                                <span class="d-block">{{ $company->name }}</span>
+                                                <span class="fs-24 fw-bolder d-block">
+                                                    {{ $companyCounts[$company->id] ?? 0 }}
+                                                </span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+
                 </div>
             </div>
         </div>

@@ -206,16 +206,16 @@
 
 
                 <!-- HR Management -->
-                @canany(['view_leave_requests', 'view_advance_requests', 'view_delivery_deposits', 'view_employee_targets', 'view_representative_targets', 'view_salary_records', 'view_resignation_requests', 'view_work_schedules'])
+                @canany(['view_leave_requests', 'view_advance_requests', 'view_delivery_deposits', 'view_employee_targets', 'view_representative_targets', 'view_salary_records', 'view_work_schedules'])
                     <li
-                        class="nxl-item nxl-hasmenu {{ request()->routeIs('leave-requests.*') || request()->routeIs('advance-requests.*') || request()->routeIs('delivery-deposits.*') || request()->routeIs('employee-targets.*') || request()->routeIs('representative-targets.*') || request()->routeIs('salary-records.*') || request()->routeIs('salary-components.*') || request()->routeIs('resignation-requests.*') || request()->routeIs('work-schedules.*') ? 'active' : '' }}">
+                        class="nxl-item nxl-hasmenu {{ request()->routeIs('leave-requests.*') || request()->routeIs('advance-requests.*') || request()->routeIs('delivery-deposits.*') || request()->routeIs('employee-targets.*') || request()->routeIs('representative-targets.*') || request()->routeIs('salary-records.*') || request()->routeIs('salary-components.*') || request()->routeIs('work-schedules.*') ? 'active' : '' }}">
                         <a href="javascript:void(0);" class="nxl-link">
                             <span class="nxl-micon"><i class="feather-briefcase"></i></span>
                             <span class="nxl-mtext">إدارة الموارد البشرية</span>
                             <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
                         </a>
                         <ul class="nxl-submenu"
-                            style="{{ request()->routeIs('leave-requests.*') || request()->routeIs('advance-requests.*') || request()->routeIs('delivery-deposits.*') || request()->routeIs('employee-targets.*') || request()->routeIs('representative-targets.*') || request()->routeIs('salary-records.*') || request()->routeIs('salary-components.*') || request()->routeIs('resignation-requests.*') || request()->routeIs('work-schedules.*') ? 'display:block;' : '' }}">
+                            style="{{ request()->routeIs('leave-requests.*') || request()->routeIs('advance-requests.*') || request()->routeIs('delivery-deposits.*') || request()->routeIs('employee-targets.*') || request()->routeIs('representative-targets.*') || request()->routeIs('salary-records.*') || request()->routeIs('salary-components.*') || request()->routeIs('work-schedules.*') ? 'display:block;' : '' }}">
 
                             <!-- Employees -->
                             @can('view_employees')
@@ -334,31 +334,38 @@
                                 </li>
                             @endcan
 
-                            @can('view_resignation_requests')
-                                <li class="nxl-item">
-                                    <a href="{{ route('resignation-requests.index') }}"
-                                        class="nxl-link {{ request()->routeIs('resignation-requests.*') ? 'active' : '' }}">
-                                        <span class="nxl-micon"><i class="feather-user-minus"></i></span>
-                                        <span class="nxl-mtext">طلبات الاستقالة</span>
-                                        <span class="notification-badge" id="resignation-requests-count"
-                                            style="display: none;">0</span>
-                                    </a>
-                                </li>
-                            @endcan
-
-                            @can('view_resignation_requests')
-                                <li class="nxl-item">
-                                    <a href="{{ route('resignation-requests.reports') }}"
-                                        class="nxl-link {{ request()->routeIs('resignation-requests.reports') ? 'active' : '' }}">
-                                        <span class="nxl-micon"><i class="feather-bar-chart-2"></i></span>
-                                        <span class="nxl-mtext">تقرير طلبات الاستقالة</span>
-                                    </a>
-                                </li>
-                            @endcan
-
                         </ul>
                     </li>
                 @endcanany
+
+                @can('view_resignation_requests')
+                    <li class="nxl-item nxl-hasmenu {{ request()->routeIs('resignation-requests.*') ? 'active' : '' }}">
+                        <a href="javascript:void(0);" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-user-minus"></i></span>
+                            <span class="nxl-mtext">الاستقاله</span>
+                            <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                        </a>
+                        <ul class="nxl-submenu"
+                            style="{{ request()->routeIs('resignation-requests.*') ? 'display:block;' : '' }}">
+                            <li class="nxl-item">
+                                <a href="{{ route('resignation-requests.index') }}"
+                                    class="nxl-link {{ request()->routeIs('resignation-requests.index') ? 'active' : '' }}">
+                                    <span class="nxl-micon"><i class="feather-user-minus"></i></span>
+                                    <span class="nxl-mtext">طلبات الاستقالة</span>
+                                    <span class="notification-badge" id="resignation-requests-count"
+                                        style="display: none;">0</span>
+                                </a>
+                            </li>
+                            <li class="nxl-item">
+                                <a href="{{ route('resignation-requests.reports') }}"
+                                    class="nxl-link {{ request()->routeIs('resignation-requests.reports') ? 'active' : '' }}">
+                                    <span class="nxl-micon"><i class="feather-bar-chart-2"></i></span>
+                                    <span class="nxl-mtext">تقرير طلبات الاستقالة</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                @endcan
 
                 <!-- Password Management -->
                 @can('view_passwords')

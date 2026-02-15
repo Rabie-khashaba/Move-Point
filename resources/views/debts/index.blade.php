@@ -12,22 +12,12 @@
             </ul>
         </div>
         <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="d-flex d-md-none">
-                    <a href="javascript:void(0)" class="page-header-right-close-toggle">
-                        <i class="feather-arrow-left me-2"></i>
-                        <span>الرجوع</span>
-                    </a>
-                </div>
-                <div class="d-flex align-items-center gap-2 page-header-right-items-wrapper">
-                    <a href="javascript:void(0);" class="btn btn-icon btn-light-brand" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
-                        <i class="feather-filter"></i>
-                    </a>
-                </div>
-            </div>
-            <div class="d-md-none d-flex align-items-center">
-                <a href="javascript:void(0)" class="page-header-right-open-toggle">
-                    <i class="feather-align-right fs-20"></i>
+            <div class="d-flex align-items-center flex-nowrap gap-2">
+                <a href="{{ route('debts.index2') }}" class="btn btn-primary">
+                    <i class="feather-grid me-1"></i>جدول المديونيات الجديد
+                </a>
+                <a href="javascript:void(0);" class="btn btn-icon btn-light-brand" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                    <i class="feather-filter"></i>
                 </a>
             </div>
         </div>
@@ -92,13 +82,20 @@
                             </div>
                         @endif
 
+                        @if(session('error'))
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                {{ session('error') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        @endif
+
                         @if($debts->count() > 0)
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
                                             <th>الاسم</th>
-                                            <th>الشركه</th>
+                                            <th>الشركة</th>
                                             <th>المبلغ</th>
                                             <th>الحالة</th>
                                             <th>تاريخ المديونية</th>
@@ -109,19 +106,17 @@
                                         @foreach($debts as $debt)
                                             @php
                                                 $person = $debt->representative ?? $debt->employee ?? $debt->supervisor;
-                                                $type = $debt->representative ? 'مندوب' : ($debt->employee ? 'موظف' : ($debt->supervisor ? 'مشرف' : 'غير محدد'));
                                             @endphp
                                             <tr>
-                                            <td>
-                                                <div class="d-flex flex-column">
-                                                    <span class="fw-bold">{{ $person->name ?? 'غير محدد' }}</span>
-                                                    <span class="text-muted" style="font-size: 0.9em;">
-                                                        {{ $person->phone ?? 'لا يوجد رقم' }}
-                                                    </span>
-                                                </div>
-                                            </td>
-
-                                                <td>{{ $person->company->name ?? "غير محدد"}}</td>
+                                                <td>
+                                                    <div class="d-flex flex-column">
+                                                        <span class="fw-bold">{{ $person->name ?? 'غير محدد' }}</span>
+                                                        <span class="text-muted" style="font-size: 0.9em;">
+                                                            {{ $person->phone ?? 'لا يوجد رقم' }}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td>{{ $person->company->name ?? 'غير محدد' }}</td>
                                                 <td>{{ number_format($debt->loan_amount, 2) }} ج.م</td>
                                                 <td>
                                                     @if($debt->status === 'سدد')
@@ -162,4 +157,3 @@
     </div>
 </div>
 @endsection
-

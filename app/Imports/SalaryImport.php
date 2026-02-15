@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\DebtSheet;
 use App\Models\salary_records1;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -129,6 +130,48 @@ class SalaryImport implements ToModel, WithHeadingRow, WithCalculatedFormulas
             $data['salary_date'] = date('Y-m') . '-01';
         }
 
+        $this->applyDebtDeductions($data);
+
         return new salary_records1($data);
+    }
+
+    private function applyDebtDeductions(array $data): void
+    {
+        $starId = isset($data['star_id']) ? trim((string) $data['star_id']) : null;
+        if (!$starId) {
+            return;
+        }
+
+        $shortTag = $this->toNumber($data['short_tag'] ?? 0);
+        $creditNote = $this->toNumber($data['cn'] ?? 0);
+        $loans = $this->toNumber($data['loans'] ?? 0);
+
+        if ($shortTag <= 0 && $creditNote <= 0 && $loans <= 0) {
+            return;
+        }
+
+        $debtSheet = DebtSheet::firstOrCreate(
+            ['star_id' => $starId],
+            ['shortage' => 0, 'credit_note' => 0, 'advances' => 0]
+        );
+
+        $debtSheet->shortage = max(0, $this->toNumber($debtSheet->shortage) - $shortTag);
+        $debtSheet->credit_note = max(0, $this->toNumber($debtSheet->credit_note) - $creditNote);
+        $debtSheet->advances = max(0, $this->toNumber($debtSheet->advances) - $loans);
+        $debtSheet->save();
+    }
+
+    private function toNumber($value): float
+    {
+        if ($value === null || $value === '') {
+            return 0.0;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        $normalized = str_replace([',', ' '], '', (string) $value);
+        return is_numeric($normalized) ? (float) $normalized : 0.0;
     }
 }

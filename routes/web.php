@@ -623,8 +623,13 @@ Route::get('advance-requests/{id}/receipt', [AdvanceRequestController::class, 's
 
 
         Route::get('debts', [DebtController::class, 'index'])->name('debts.index');
+        Route::get('debts/index2', [DebtController::class, 'index2'])->name('debts.index2');
         Route::post('debts/{debt}/toggle-status', [DebtController::class, 'toggleStatus'])
             ->name('debts.toggle-status');
+        Route::post('debts-sheets', [DebtController::class, 'storeSheet'])->name('debts-sheets.store');
+        Route::put('debts-sheets/{debtSheet}', [DebtController::class, 'updateSheet'])->name('debts-sheets.update');
+        Route::delete('debts-sheets/{debtSheet}', [DebtController::class, 'destroySheet'])->name('debts-sheets.destroy');
+        Route::post('debts-sheets/import', [DebtController::class, 'importSheet'])->name('debts-sheets.import');
             
             
             

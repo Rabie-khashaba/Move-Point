@@ -313,9 +313,16 @@
                             @can('view_advance_requests')
                                 <li class="nxl-item">
                                     <a href="{{ route('debts.index') }}"
-                                        class="nxl-link {{ request()->routeIs('debts.*') ? 'active' : '' }}">
+                                        class="nxl-link {{ request()->routeIs('debts.index') ? 'active' : '' }}">
                                         <span class="nxl-micon"><i class="feather-pie-chart"></i></span>
                                         <span class="nxl-mtext">المديونات</span>
+                                    </a>
+                                </li>
+                                <li class="nxl-item">
+                                    <a href="{{ route('debts.index2') }}"
+                                        class="nxl-link {{ request()->routeIs('debts.index2') ? 'active' : '' }}">
+                                        <span class="nxl-micon"><i class="feather-grid"></i></span>
+                                        <span class="nxl-mtext">المديونات الجديدة</span>
                                     </a>
                                 </li>
                             @endcan
@@ -731,3 +738,5 @@
 <!--! ================================================================ !-->
 <!--! [End] Navigation Menu !-->
 <!--! ================================================================ !-->
+
+

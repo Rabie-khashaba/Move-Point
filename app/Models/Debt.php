@@ -37,4 +37,3 @@ class Debt extends Model
 
 }
 
-

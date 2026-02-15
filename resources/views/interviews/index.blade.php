@@ -1089,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 supervisorSelect.innerHTML = '<option value="">اختر المشرف</option>';
                 data.forEach(sup => {
-                    supervisorSelect.innerHTML += `<option value="${sup.user_id}">${sup.name}</option>`;
+                    supervisorSelect.innerHTML += `<option value="${sup.id}">${sup.name}</option>`;
                 });
             })
             .catch(err => {
@@ -1381,3 +1381,4 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 </script>
+

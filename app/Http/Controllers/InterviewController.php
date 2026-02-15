@@ -239,7 +239,7 @@ class InterviewController extends Controller
         $request->validate([
             'date_interview' => 'required|date',
             'message_id' => 'required',
-            'supervisor_id' => 'nullable',
+            'supervisor_id' => 'nullable|exists:supervisors,id',
 
         ]);
 
@@ -604,3 +604,4 @@ public function store(Request $request)
     }
 
 }
+

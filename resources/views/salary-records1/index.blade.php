@@ -64,6 +64,14 @@
                     <input type="month" name="month" class="form-control" value="{{ request('month') }}">
                 </div>
 
+                <div class="col-md-2">
+                    <select name="per_page" class="form-control">
+                        <option value="25" {{ (string) request('per_page', '50') === '25' ? 'selected' : '' }}>25 / page</option>
+                        <option value="50" {{ (string) request('per_page', '50') === '50' ? 'selected' : '' }}>50 / page</option>
+                        <option value="100" {{ (string) request('per_page', '50') === '100' ? 'selected' : '' }}>100 / page</option>
+                    </select>
+                </div>
+
 
                 <div class="col-md-2">
                     <button class="btn btn-primary">بحث</button>
@@ -139,6 +147,9 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="d-flex justify-content-center mt-3">
+                    {{ $records->links('pagination::bootstrap-5') }}
+                </div>
                 @else
                     <div class="text-center py-5">
                         <h5 class="text-muted">لا توجد سجلات</h5>
@@ -200,7 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('يرجى تحديد سجل واحد على الأقل للحذف');
                 return false;
             }
-            
+
             // إضافة IDs المحددة للنموذج
             checkedIds.forEach(id => {
                 const input = document.createElement('input');

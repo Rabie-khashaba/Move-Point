@@ -24,16 +24,17 @@
             <div class="col-lg-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">جدول المديونيات الجديد (star_id)</h5>
+                        <h5 class="card-title mb-0">جدول المديونيات الجديد (كود المندوب)</h5>
                         <div class="d-flex flex-nowrap gap-2">
                             <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#importDebtSheetModal">
-                                <i class="feather-upload me-1"></i>استيراد Excel
+                                <i class="feather-upload me-1"></i>استيراد إكسل
                             </button>
                             <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createDebtSheetModal">
                                 <i class="feather-plus me-1"></i>إضافة سجل
                             </button>
                         </div>
                     </div>
+
                     <div class="card-body">
                         @if(session('success'))
                             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -59,12 +60,64 @@
                             </div>
                         @endif
 
-                        <form method="GET" action="{{ route('debts.index2') }}" class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label">بحث بـ star_id</label>
-                                <input type="text" name="sheet_search" class="form-control" value="{{ request('sheet_search') }}" placeholder="اكتب star_id">
+                        @if(isset($companyStats) && $companyStats->count() > 0)
+                            <label class="fw-bold mb-3 d-block">إحصائيات مديونيات الشركات</label>
+                            <div class="d-flex flex-nowrap overflow-auto gap-3 mb-4">
+                                @php
+                                    $companyCardBg = ['#FFF4E6', '#E8F7FF', '#EAFBF1', '#F3ECFF', '#FFF0F3', '#EEF2FF'];
+                                    $companyIconBg = ['bg-warning', 'bg-info', 'bg-success', 'bg-primary', 'bg-danger', 'bg-dark'];
+                                @endphp
+                                @foreach($companyStats as $index => $stat)
+                                    <div class="card border-0" style="min-width: 280px; background-color: {{ $companyCardBg[$index % count($companyCardBg)] }};">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="avatar-text avatar-xl rounded {{ $companyIconBg[$index % count($companyIconBg)] }} text-white">
+                                                    <i class="feather-credit-card"></i>
+                                                </div>
+                                                <div>
+                                                    <span class="d-block fw-bold">{{ $stat['company_name'] ?? '-' }}</span>
+                                                    <span class="text-muted d-block">إجمالي المديونيات</span>
+                                                    <span class="fs-24 fw-bolder">{{ number_format((float) ($stat['debt_total'] ?? 0), 2) }}</span>
+                                                    <small class="text-muted d-block mt-1">
+                                                        عدد المندوبين: {{ number_format((int) ($stat['representatives_count'] ?? 0)) }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
                             </div>
-                            <div class="col-md-3 d-flex align-items-end">
+                        @endif
+
+                        <form method="GET" action="{{ route('debts.index2') }}" class="row g-3 mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">بحث بكود المندوب</label>
+                                <input type="text" name="sheet_search" class="form-control" value="{{ request('sheet_search') }}" placeholder="اكتب كود المندوب">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">الشركة</label>
+                                <select name="company_id" class="form-control">
+                                    <option value="">كل الشركات</option>
+                                    @foreach($companies as $company)
+                                        <option value="{{ $company->id }}" {{ (string) request('company_id') === (string) $company->id ? 'selected' : '' }}>
+                                            {{ $company->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">شهر المديونية</label>
+                                <input type="month" name="sheet_month" class="form-control" value="{{ request('sheet_month') }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">من تاريخ</label>
+                                <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">إلى تاريخ</label>
+                                <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
                                 <button type="submit" class="btn btn-primary me-2">بحث</button>
                                 <a href="{{ route('debts.index2') }}" class="btn btn-light">مسح</a>
                             </div>
@@ -75,11 +128,14 @@
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
-                                            <th>star_id</th>
+                                            <th>كود المندوب</th>
+                                            <th>الشركة</th>
                                             <th>shortage</th>
                                             <th>credit_note</th>
-                                            <th>advances</th>
+                                            <th>Loans</th>
                                             <th>الإجمالي</th>
+                                            <th>الحالة</th>
+                                            <th>تاريخ الشهر</th>
                                             <th>آخر تحديث</th>
                                             <th>الإجراءات</th>
                                         </tr>
@@ -88,31 +144,41 @@
                                         @foreach($debtSheets as $sheet)
                                             <tr>
                                                 <td>{{ $sheet->star_id }}</td>
+                                                <td>{{ $sheet->company_name ?? '-' }}</td>
                                                 <td>{{ number_format((float) $sheet->shortage, 2) }}</td>
                                                 <td>{{ number_format((float) $sheet->credit_note, 2) }}</td>
                                                 <td>{{ number_format((float) $sheet->advances, 2) }}</td>
                                                 <td class="fw-bold">
                                                     {{ number_format((float) $sheet->shortage + (float) $sheet->credit_note + (float) $sheet->advances, 2) }}
                                                 </td>
+                                                <td>
+                                                    @if($sheet->status === 'سدد')
+                                                        <span class="badge bg-success">سدد</span>
+                                                    @else
+                                                        <span class="badge bg-danger">لم يسدد</span>
+                                                    @endif
+                                                </td>
+                                                <td>{{ $sheet->sheet_date?->format('Y-m') ?? '-' }}</td>
                                                 <td>{{ $sheet->updated_at?->format('Y-m-d H:i') }}</td>
                                                 <td>
                                                     <div class="d-flex flex-nowrap gap-1">
-                                                    <button type="button"
+                                                        <button type="button"
                                                             class="btn btn-sm btn-warning edit-sheet-btn"
                                                             data-id="{{ $sheet->id }}"
                                                             data-star_id="{{ $sheet->star_id }}"
                                                             data-shortage="{{ $sheet->shortage }}"
                                                             data-credit_note="{{ $sheet->credit_note }}"
                                                             data-advances="{{ $sheet->advances }}"
+                                                            data-sheet_date="{{ $sheet->sheet_date?->format('Y-m') }}"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#editDebtSheetModal">
-                                                        تعديل
-                                                    </button>
-                                                    <form action="{{ route('debts-sheets.destroy', $sheet) }}" method="POST" class="d-inline-flex">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('هل أنت متأكد من الحذف؟')">حذف</button>
-                                                    </form>
+                                                            تعديل
+                                                        </button>
+                                                        <form action="{{ route('debts-sheets.destroy', $sheet) }}" method="POST" class="d-inline-flex">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('هل أنت متأكد من الحذف؟')">حذف</button>
+                                                        </form>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -147,7 +213,7 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">star_id</label>
+                        <label class="form-label">كود المندوب</label>
                         <input type="text" class="form-control" name="star_id" required>
                     </div>
                     <div class="mb-3">
@@ -159,8 +225,12 @@
                         <input type="number" step="0.01" class="form-control" name="credit_note" value="0">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">advances (السلف)</label>
+                        <label class="form-label">Loans</label>
                         <input type="number" step="0.01" class="form-control" name="advances" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الشهر</label>
+                        <input type="month" class="form-control" name="sheet_date" value="{{ now()->format('Y-m') }}" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -184,7 +254,7 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">star_id</label>
+                        <label class="form-label">كود المندوب</label>
                         <input type="text" class="form-control" name="star_id" id="edit_star_id" required>
                     </div>
                     <div class="mb-3">
@@ -196,8 +266,12 @@
                         <input type="number" step="0.01" class="form-control" name="credit_note" id="edit_credit_note">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">advances (السلف)</label>
+                        <label class="form-label">Loans</label>
                         <input type="number" step="0.01" class="form-control" name="advances" id="edit_advances">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الشهر</label>
+                        <input type="month" class="form-control" name="sheet_date" id="edit_sheet_date" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -219,7 +293,11 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted mb-3">الأعمدة المطلوبة: <code>star_id</code>, <code>shortage</code>, <code>credit note</code>, <code>advances</code></p>
+                    <p class="text-muted mb-3">الأعمدة المطلوبة: <code>star_id</code> (كود المندوب)، <code>shortage</code> (العجز)، <code>credit note</code> (الإشعار الدائن)، <code>advances</code> (السلف)</p>
+                    <div class="mb-3">
+                        <label class="form-label">الشهر</label>
+                        <input type="month" name="month" class="form-control" value="{{ now()->format('Y-m') }}" required>
+                    </div>
                     <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
                 </div>
                 <div class="modal-footer">
@@ -239,6 +317,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const shortageInput = document.getElementById('edit_shortage');
     const creditNoteInput = document.getElementById('edit_credit_note');
     const advancesInput = document.getElementById('edit_advances');
+    const sheetDateInput = document.getElementById('edit_sheet_date');
 
     editButtons.forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -248,6 +327,7 @@ document.addEventListener('DOMContentLoaded', function () {
             shortageInput.value = btn.getAttribute('data-shortage') || 0;
             creditNoteInput.value = btn.getAttribute('data-credit_note') || 0;
             advancesInput.value = btn.getAttribute('data-advances') || 0;
+            sheetDateInput.value = btn.getAttribute('data-sheet_date') || "{{ now()->format('Y-m') }}";
         });
     });
 });

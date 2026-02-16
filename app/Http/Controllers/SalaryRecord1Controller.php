@@ -2,37 +2,46 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\salary_records1;
-use App\Models\Representative;
-use App\Models\Supervisor;
-use App\Models\Debt;
 use App\Imports\SalaryImport;
-use Maatwebsite\Excel\Facades\Excel;
+use App\Models\Debt;
+use App\Models\Representative;
+use App\Models\salary_records1;
+use App\Models\Supervisor;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Throwable;
 
 class SalaryRecord1Controller extends Controller
 {
     public function index(Request $request)
     {
+        $allowedPerPage = [25, 50, 100];
+        $perPage = (int) $request->input('per_page', 50);
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 50;
+        }
+
         $query = salary_records1::query();
 
         if ($request->filled('search')) {
             $q = $request->search;
-            $query->where(function($qr) use ($q) {
-                $qr->where('name','like',"%{$q}%")
-                    ->orWhere('star_id','like',"%{$q}%")
-                    ->orWhere('zone','like',"%{$q}%");
+            $query->where(function ($qr) use ($q) {
+                $qr->where('name', 'like', "%{$q}%")
+                    ->orWhere('star_id', 'like', "%{$q}%")
+                    ->orWhere('zone', 'like', "%{$q}%");
             });
         }
 
-        // فلترة بالشهر
         if ($month = request('month')) {
             $query->whereMonth('salary_date', date('m', strtotime($month)))
                 ->whereYear('salary_date', date('Y', strtotime($month)));
         }
 
-        $records = $query->orderBy('id','desc')->paginate(25);
+        $records = $query
+            ->orderBy('id', 'desc')
+            ->paginate($perPage)
+            ->appends($request->query());
 
         return view('salary-records1.index', compact('records'));
     }
@@ -44,66 +53,73 @@ class SalaryRecord1Controller extends Controller
 
     public function import(Request $request)
     {
-       // return $request;
         $request->validate([
             'file' => 'required|file|mimes:xlsx,xls,csv',
             'mode' => 'required|in:append,replace',
-            'month' => 'required|date_format:Y-m'
+            'month' => 'required|date_format:Y-m',
         ]);
 
         $file = $request->file('file');
         $mode = $request->mode;
         $month = $request->month;
 
-        if ($mode === 'replace') {
-            // استبدال: نحذف البيانات القديمة داخل Transaction
-            DB::transaction(function() use ($file, $month) {
-                DB::table('salary_records1s')->truncate();
-                Excel::import(new SalaryImport($month), $file);
-            });
-            $this->syncDebtsFromSalary($month);
-            return redirect()->route('salary-record1.index')->with('success', 'تم استبدال البيانات واستيراد الملف بنجاح.');
-        } else {
-            // إضافة
+        try {
+            if ($mode === 'replace') {
+                DB::transaction(function () use ($file, $month) {
+                    DB::table('salary_records1s')->truncate();
+                    Excel::import(new SalaryImport($month), $file);
+                });
+
+                $this->syncDebtsFromSalary($month);
+                return redirect()->route('salary-record1.index')->with('success', 'تم استبدال البيانات واستيراد الملف بنجاح.');
+            }
+
             Excel::import(new SalaryImport($month), $file);
             $this->syncDebtsFromSalary($month);
             return redirect()->route('salary-record1.index')->with('success', 'تم إضافة بيانات الملف إلى قاعدة البيانات.');
+        } catch (Throwable $e) {
+            return back()->withInput()->with('error', $e->getMessage());
         }
     }
 
-    // استيراد مباشر من المسار على السيرفر (اختياري)
     public function importFromServer(Request $request)
     {
         $request->validate(['mode' => 'required|in:append,replace']);
         $mode = $request->mode;
         $path = '/mnt/data/قبض مناديب نهائي 7-10 شهر 9-2025 (2).xlsx';
+
         if (!file_exists($path)) {
             return back()->with('error', 'الملف غير موجود في /mnt/data');
         }
 
-        if ($mode === 'replace') {
-            DB::transaction(function() use ($path) {
-                DB::table('salary_records1s')->truncate();
-                Excel::import(new SalaryImport, $path);
-            });
-            return redirect()->route('salary-record1.index')->with('success', 'تم استبدال البيانات واستيراد الملف من السيرفر.');
-        } else {
+        try {
+            if ($mode === 'replace') {
+                DB::transaction(function () use ($path) {
+                    DB::table('salary_records1s')->truncate();
+                    Excel::import(new SalaryImport, $path);
+                });
+
+                return redirect()->route('salary-record1.index')->with('success', 'تم استبدال البيانات واستيراد الملف من السيرفر.');
+            }
+
             Excel::import(new SalaryImport, $path);
             return redirect()->route('salary-record1.index')->with('success', 'تم إضافة بيانات الملف من السيرفر.');
+        } catch (Throwable $e) {
+            return back()->withInput()->with('error', $e->getMessage());
         }
     }
 
     public function destroy(salary_records1 $record)
     {
         $record->delete();
-        return back()->with('success','تم حذف السجل');
+        return back()->with('success', 'تم حذف السجل');
     }
 
     public function bulkDelete(Request $request)
     {
         $request->validate([
             'ids' => 'required|array',
-            'ids.*' => 'exists:salary_records1s,id'
+            'ids.*' => 'exists:salary_records1s,id',
         ]);
 
         $count = salary_records1::whereIn('id', $request->ids)->delete();

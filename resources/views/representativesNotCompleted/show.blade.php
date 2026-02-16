@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'عرض المندوب')
 
@@ -529,50 +529,89 @@
                             <div class="tab-pane fade" id="schedule" role="tabpanel">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h6 class="mb-0">المديونات</h6>
-                                   {{-- @can('create_work_schedules')
-                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
-                                        <i class="feather-plus me-1"></i>إضافة مواعيد عمل
-                                    </button>
-                                    @endcan --}}
                                 </div>
-                                @php
-                                    $debits = $representative->debits()->latest()->take(3)->get();
-                                @endphp
-                                @if($debits->count() > 0)
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
-                                        <thead>
-                                            <tr>
-                                                <th>الشركه</th>
-                                                <th>المبلغ</th>
-                                                <th>الحاله</th>
-                                                <th> اخر تحديث</th>
+                                @if(isset($debtSheets) && $debtSheets->count() > 0)
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>الشركة</th>
+                                                    <th>الحالة</th>
+                                                    <th>الشهر</th>
+                                                    <th>Short Tag</th>
+                                                    <th>CN</th>
+                                                    <th>Loans</th>
+                                                    <th>الإجمالي</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($debtSheets as $debtSheet)
+                                                    @php
+                                                        $shortageTotal = (float) $debtSheet->shortage;
+                                                        $creditNoteTotal = (float) $debtSheet->credit_note;
+                                                        $advancesTotal = (float) $debtSheet->advances;
+                                                        $grandTotal = $shortageTotal + $creditNoteTotal + $advancesTotal;
+                                                    @endphp
+                                                    <tr>
+                                                        <td>{{ $representative->company->name ?? '-' }}</td>
+                                                        <td>
+                                                            @if($debtSheet->status === 'سدد')
+                                                                <span class="badge bg-success">سدد</span>
+                                                            @else
+                                                                <span class="badge bg-danger">لم يسدد</span>
+                                                            @endif
+                                                        </td>
+                                                        <td>{{ $debtSheet->sheet_date?->format('Y-m') ?? '-' }}</td>
+                                                        <td>{{ number_format($shortageTotal, 2) }}</td>
+                                                        <td>{{ number_format($creditNoteTotal, 2) }}</td>
+                                                        <td>{{ number_format($advancesTotal, 2) }}</td>
+                                                        <td class="fw-bold">{{ number_format($grandTotal, 2) }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
 
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($debits as $debit)
-                                            <tr>
-                                                <td>{{ $debit->representative->company->name }}</td>
-                                                <td>{{ number_format($debit->loan_amount, 2) }} ج.م</td>
-                                                <td>
-                                                    @if($debit->status === 'سدد')
-                                                        <span class="badge bg-success">سدد</span>
-                                                    @else
-                                                        <span class="badge bg-danger">لم يسدد</span>
-                                                    @endif
-                                                </td>
-                                                <td>{{ $debit->updated_at?->format('Y-m-d H:i') ?? 'غير متاح' }}</td>
-                                            </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
+                                    <h6 class="mt-4 mb-2">المدفوع من شيت المرتبات</h6>
+                                    @if(isset($salaryDeductions) && $salaryDeductions->count() > 0)
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>الشهر</th>
+                                                        <th>Short Tag</th>
+                                                        <th>CN</th>
+                                                        <th>Loans</th>
+                                                        <th>إجمالي المدفوع</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($salaryDeductions as $row)
+                                                        @php
+                                                            $shortTagPaid = (float) ($row->short_tag ?? 0);
+                                                            $cnPaid = (float) ($row->cn ?? 0);
+                                                            $loansPaid = (float) ($row->loans ?? 0);
+                                                            $paidTotal = $shortTagPaid + $cnPaid + $loansPaid;
+                                                        @endphp
+                                                        <tr>
+                                                            <td>{{ $row->salary_date?->format('Y-m') ?? '-' }}</td>
+                                                            <td>{{ number_format($shortTagPaid, 2) }}</td>
+                                                            <td>{{ number_format($cnPaid, 2) }}</td>
+                                                            <td>{{ number_format($loansPaid, 2) }}</td>
+                                                            <td class="fw-bold">{{ number_format($paidTotal, 2) }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    @else
+                                        <div class="text-muted">لا يوجد مدفوعات مسجلة في شيت المرتبات لهذا الكود.</div>
+                                    @endif
                                 @else
-                                <div class="text-center py-3">
-                                    <i class="feather-clock text-muted fs-24 mb-2"></i>
-                                    <p class="text-muted mb-0">لا توجد مديونات</p>
-                                </div>
+                                    <div class="text-center py-3">
+                                        <i class="feather-clock text-muted fs-24 mb-2"></i>
+                                        <p class="text-muted mb-0">لا توجد مديونات</p>
+                                    </div>
                                 @endif
                             </div>
 
@@ -656,6 +695,7 @@
 
     });
 </script>
+
 
 
 

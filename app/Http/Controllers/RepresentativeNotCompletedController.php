@@ -12,6 +12,8 @@ use App\Models\Location;
 use App\Models\User;
 use App\Models\ResignationRequest;
 use App\Models\TrainingSession;
+use App\Models\DebtSheet;
+use App\Models\salary_records1;
 use App\Services\WhatsAppWorkService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -333,6 +335,26 @@ class RepresentativeNotCompletedController extends Controller
 
         $representative = $this->service->find($id);
         $representative->load(['training', 'inquiry']);
+        $debtSheets = collect();
+        $salaryDeductions = collect();
+        $code = trim((string) ($representative->code ?? ''));
+        if ($code !== '') {
+            $debtSheets = DebtSheet::where('star_id', $code)
+                ->orderByDesc('sheet_date')
+                ->orderByDesc('id')
+                ->get();
+            $salaryDeductions = salary_records1::query()
+                ->where('star_id', $code)
+                ->where(function ($q) {
+                    $q->whereNotNull('short_tag')
+                        ->orWhereNotNull('cn')
+                        ->orWhereNotNull('loans');
+                })
+                ->orderByDesc('salary_date')
+                ->orderByDesc('id')
+                ->take(12)
+                ->get(['salary_date', 'short_tag', 'cn', 'loans']);
+        }
 
 
          $workStartDate = \App\Models\WorkStart::where('representative_id', $representative->id)
@@ -376,7 +398,7 @@ class RepresentativeNotCompletedController extends Controller
         }
 
 
-        return view('representativesNotCompleted.show', compact('representative','workStartDate','trainingDate'));
+        return view('representativesNotCompleted.show', compact('representative', 'workStartDate', 'trainingDate', 'debtSheets', 'salaryDeductions'));
     }
 
     public function downloadAttachment($id, $index)

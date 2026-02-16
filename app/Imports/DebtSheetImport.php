@@ -13,6 +13,8 @@ class DebtSheetImport implements ToCollection, WithHeadingRow, WithCalculatedFor
 {
     use Importable;
 
+    protected ?string $month;
+    protected string $status;
     protected array $failures = [];
     protected int $imported = 0;
     protected int $skipped = 0;
@@ -33,6 +35,12 @@ class DebtSheetImport implements ToCollection, WithHeadingRow, WithCalculatedFor
         'السلف' => 'advances',
     ];
 
+    public function __construct(?string $month = null, string $status = 'لم يسدد')
+    {
+        $this->month = $month;
+        $this->status = in_array($status, ['سدد', 'لم يسدد'], true) ? $status : 'لم يسدد';
+    }
+
     public function collection(Collection $rows)
     {
         foreach ($rows as $index => $row) {
@@ -52,14 +60,18 @@ class DebtSheetImport implements ToCollection, WithHeadingRow, WithCalculatedFor
                 continue;
             }
 
-            DebtSheet::updateOrCreate(
-                ['star_id' => (string) $starId],
-                [
-                    'shortage' => $this->toNumber($data['shortage'] ?? 0),
-                    'credit_note' => $this->toNumber($data['credit_note'] ?? 0),
-                    'advances' => $this->toNumber($data['advances'] ?? 0),
-                ]
-            );
+            DebtSheet::create([
+                'star_id' => (string) $starId,
+                'shortage' => $this->toNumber($data['shortage'] ?? 0),
+                'credit_note' => $this->toNumber($data['credit_note'] ?? 0),
+                'advances' => $this->toNumber($data['advances'] ?? 0),
+                'status' => $this->resolveDebtStatus(
+                    $this->toNumber($data['shortage'] ?? 0),
+                    $this->toNumber($data['credit_note'] ?? 0),
+                    $this->toNumber($data['advances'] ?? 0)
+                ),
+                'sheet_date' => $this->resolveSheetDate(),
+            ]);
 
             $this->imported++;
         }
@@ -96,6 +108,7 @@ class DebtSheetImport implements ToCollection, WithHeadingRow, WithCalculatedFor
             if (!isset($this->map[$key])) {
                 continue;
             }
+
             $column = $this->map[$key];
             $data[$column] = is_string($value) ? trim($value) : $value;
         }
@@ -130,5 +143,18 @@ class DebtSheetImport implements ToCollection, WithHeadingRow, WithCalculatedFor
         $normalized = str_replace([',', ' '], '', (string) $value);
         return is_numeric($normalized) ? (float) $normalized : 0;
     }
-}
 
+    private function resolveSheetDate(): string
+    {
+        if ($this->month && preg_match('/^\d{4}-\d{2}$/', $this->month)) {
+            return $this->month . '-01';
+        }
+
+        return date('Y-m') . '-01';
+    }
+
+    private function resolveDebtStatus(float $shortage, float $creditNote, float $advances): string
+    {
+        return ($shortage + $creditNote + $advances) <= 0 ? 'سدد' : 'لم يسدد';
+    }
+}

@@ -78,7 +78,12 @@ class SalaryRecord1Controller extends Controller
             $this->syncDebtsFromSalary($month);
             return redirect()->route('salary-record1.index')->with('success', 'تم إضافة بيانات الملف إلى قاعدة البيانات.');
         } catch (Throwable $e) {
-            return back()->withInput()->with('error', $e->getMessage());
+            $message = (string) $e->getMessage();
+            if (!preg_match('/^\[[A-Z0-9\-]+\]/', $message)) {
+                $message = '[SAL-IMP-000] ' . $message;
+            }
+
+            return back()->withInput()->with('error', $message);
         }
     }
 
@@ -105,7 +110,12 @@ class SalaryRecord1Controller extends Controller
             Excel::import(new SalaryImport, $path);
             return redirect()->route('salary-record1.index')->with('success', 'تم إضافة بيانات الملف من السيرفر.');
         } catch (Throwable $e) {
-            return back()->withInput()->with('error', $e->getMessage());
+            $message = (string) $e->getMessage();
+            if (!preg_match('/^\[[A-Z0-9\-]+\]/', $message)) {
+                $message = '[SAL-IMP-000] ' . $message;
+            }
+
+            return back()->withInput()->with('error', $message);
         }
     }
 

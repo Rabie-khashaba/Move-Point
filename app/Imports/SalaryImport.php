@@ -14,6 +14,12 @@ class SalaryImport implements ToModel, WithHeadingRow, WithCalculatedFormulas
 {
     use Importable;
 
+    private const ERR_NO_DEBT = 'SAL-IMP-001';
+    private const ERR_SHORT_TAG_EXCEEDS = 'SAL-IMP-002';
+    private const ERR_CN_EXCEEDS = 'SAL-IMP-003';
+    private const ERR_LOANS_EXCEEDS = 'SAL-IMP-004';
+    private const ERR_TOTAL_DEDUCTION_EXCEEDS = 'SAL-IMP-005';
+
     protected $month;
 
     public function __construct($month = null)
@@ -140,8 +146,9 @@ class SalaryImport implements ToModel, WithHeadingRow, WithCalculatedFormulas
         $shortTag = $this->toNumber($data['short_tag'] ?? 0);
         $creditNote = $this->toNumber($data['cn'] ?? 0);
         $loans = $this->toNumber($data['loans'] ?? 0);
+        $totalDeduction = $this->toNumber($data['total_deduction'] ?? 0);
 
-        if ($shortTag <= 0 && $creditNote <= 0 && $loans <= 0) {
+        if ($shortTag <= 0 && $creditNote <= 0 && $loans <= 0 && $totalDeduction <= 0) {
             return;
         }
 
@@ -157,7 +164,52 @@ class SalaryImport implements ToModel, WithHeadingRow, WithCalculatedFormulas
             ->get();
 
         if ($debtSheets->isEmpty()) {
-            throw new RuntimeException("لا يوجد مديونية لهذا الكود: {$starId}");
+            throw new RuntimeException(sprintf('[%s] لا يوجد مديونية لهذا الكود: %s', self::ERR_NO_DEBT, $starId));
+        }
+
+        $availableShortTag = $this->toNumber($debtSheets->sum('shortage'));
+        $availableCreditNote = $this->toNumber($debtSheets->sum('credit_note'));
+        $availableLoans = $this->toNumber($debtSheets->sum('advances'));
+        $availableTotal = $availableShortTag + $availableCreditNote + $availableLoans;
+
+        if ($shortTag > $availableShortTag) {
+            throw new RuntimeException(sprintf(
+                '[%s] قيمة Short Tag في الشيت (%s) أكبر من المتاح في المديونية (%s) للكود %s',
+                self::ERR_SHORT_TAG_EXCEEDS,
+                $shortTag,
+                $availableShortTag,
+                $starId
+            ));
+        }
+
+        if ($creditNote > $availableCreditNote) {
+            throw new RuntimeException(sprintf(
+                '[%s] قيمة CN في الشيت (%s) أكبر من المتاح في المديونية (%s) للكود %s',
+                self::ERR_CN_EXCEEDS,
+                $creditNote,
+                $availableCreditNote,
+                $starId
+            ));
+        }
+
+        if ($loans > $availableLoans) {
+            throw new RuntimeException(sprintf(
+                '[%s] قيمة Loans في الشيت (%s) أكبر من المتاح في المديونية (%s) للكود %s',
+                self::ERR_LOANS_EXCEEDS,
+                $loans,
+                $availableLoans,
+                $starId
+            ));
+        }
+
+        if ($totalDeduction > 0 && $totalDeduction > $availableTotal) {
+            throw new RuntimeException(sprintf(
+                '[%s] قيمة Total Deduction في الشيت (%s) أكبر من إجمالي المديونية المتاحة (%s) للكود %s',
+                self::ERR_TOTAL_DEDUCTION_EXCEEDS,
+                $totalDeduction,
+                $availableTotal,
+                $starId
+            ));
         }
 
         foreach ($debtSheets as $debtSheet) {

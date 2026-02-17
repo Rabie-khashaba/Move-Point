@@ -8,7 +8,20 @@
         <div class="card-body">
             <h5>استيراد ملف Excel (Sheet: Salary Records)</h5>
 
-            @if(session('error')) <div class="alert alert-danger">{{ session('error') }}</div> @endif
+            @if(session('error'))
+                @php
+                    $importError = (string) session('error');
+                    preg_match('/^\[([A-Z0-9\-]+)\]\s*(.*)$/u', $importError, $matches);
+                    $errorCode = $matches[1] ?? null;
+                    $errorMessage = $matches[2] ?? $importError;
+                @endphp
+                <div class="alert alert-danger">
+                    @if($errorCode)
+                        <div><strong>كود الخطأ:</strong> <span class="badge bg-danger">{{ $errorCode }}</span></div>
+                    @endif
+                    <div>{{ $errorMessage }}</div>
+                </div>
+            @endif
             @if($errors->any()) <div class="alert alert-danger">{{ implode(', ', $errors->all()) }}</div> @endif
 
             <form action="{{ route('salary-record1.import') }}" method="POST" enctype="multipart/form-data">

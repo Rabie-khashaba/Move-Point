@@ -525,6 +525,15 @@
                                 </select>
                                 <small class="text-muted">يمكن اختيار المحافظة فقط أو المحافظة والمنطقة معاً</small>
                             </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">الشركه</label>
+                                <select name="company_id" id="change_company_id" class="form-control" required>
+                                    <option value="">اختر الشركه</option>
+                                    @foreach(\App\Models\Company::all() as $company)
+                                        <option value="{{ $company->id }}">{{ $company->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">

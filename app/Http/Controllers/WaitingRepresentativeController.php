@@ -284,7 +284,7 @@ class WaitingRepresentativeController extends Controller
         // Send WhatsApp message with Google Maps URL
         $whatsappResult = $this->whatsappService->send($representative->phone, $message->description, $request->date, $message->google_map_url, null);
 
-        return redirect()->route(route: 'waiting-representatives.index')->with('success', "تم ارسال بيانات بدء العمل بنجاح ");
+        return redirect()->route(route: 'waiting-representatives.index')->with('success', 'Location, governorate, and company updated successfully.');
 
     }
 
@@ -294,12 +294,14 @@ class WaitingRepresentativeController extends Controller
         $request->validate([
             'government_id' => 'required',
             'location_id' => 'required',
+            'company_id' => 'required|exists:companies,id',
         ]);
 
         $representative = Representative::find($id);
 
         $representative->location_id = $request->location_id;
         $representative->governorate_id = $request->government_id;
+        $representative->company_id = $request->company_id;
         $representative->save();
 
 
@@ -307,7 +309,7 @@ class WaitingRepresentativeController extends Controller
             'status' => 1,
         ]);
 
-        return redirect()->route(route: 'waiting-representatives.index')->with('success', "تم تغير المنطقه بنجاح ");
+        return redirect()->route(route: 'waiting-representatives.index')->with('success', 'Location, governorate, and company updated successfully.');
     }
 
     public function resign(Request $request, $id)

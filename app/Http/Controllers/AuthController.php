@@ -14,6 +14,22 @@ use Carbon\Carbon; // Add this line
 
 class AuthController extends Controller
 {
+    private function intendedAfterLogin(string $fallback): string
+    {
+        $intended = session()->pull('url.intended');
+
+        if (!is_string($intended) || $intended === '') {
+            return $fallback;
+        }
+
+        $path = parse_url($intended, PHP_URL_PATH) ?: '';
+        if (str_starts_with($path, '/notifications/')) {
+            return $fallback;
+        }
+
+        return $intended;
+    }
+
     public function showLoginForm()
     {
         return view('auth.login');
@@ -254,11 +270,13 @@ class AuthController extends Controller
                 Log::info('User logged in successfully: ' . $user->phone);
 
                 // التوجيه حسب نوع المستخدم
-                return match ($user->type) {
-                    'admin' => redirect()->intended('/'),
-                    'employee', 'supervisor', 'representative' => redirect()->intended('/dashboards/my'),
-                    default => redirect()->intended('/'),
+                $fallback = match ($user->type) {
+                    'admin' => '/',
+                    'employee', 'supervisor', 'representative' => '/dashboards/my',
+                    default => '/',
                 };
+
+                return redirect()->to($this->intendedAfterLogin($fallback));
             }
 
             Log::warning('Failed login attempt for phone: ' . $credentials['phone']);

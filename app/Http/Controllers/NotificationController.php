@@ -251,15 +251,16 @@ class NotificationController extends Controller
                 \Log::info('Notification creation result', ['result' => $result]);
                 $message = "تم إرسال الإشعار إلى أنواع المستخدمين المحددة";
             } else {
-                \Log::info('Creating notification for all admins');
-                $result = $this->notificationService->notifyAdmins(
+                \Log::info('Creating notification for all employees');
+                $result = $this->notificationService->notifyUserTypes(
+                    ['employee'],
                     $validated['title'],
                     $validated['body'],
                     $validated['type'],
                     $notificationData
                 );
                 \Log::info('Notification creation result', ['result' => $result]);
-                $message = "تم إرسال الإشعار إلى جميع المستخدمين";
+                $message = 'Notification sent to all employees';
             }
 
             // Add scheduling info to message

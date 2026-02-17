@@ -473,6 +473,23 @@
                     </ul>
                 </li>
 
+                @php
+                    $userType = strtolower(trim((string) auth()->user()->type));
+                    $showNotificationsMenu = in_array($userType, ['admin', 'employee'], true)
+                        || auth()->user()->hasAnyRole(['admin', 'employee']);
+                @endphp
+                @if($showNotificationsMenu)
+                    <li class="nxl-item">
+                        <a href="{{ route('notifications.index') }}"
+                            class="nxl-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
+                            <span class="nxl-micon"><i class="feather-bell"></i></span>
+                            <span class="nxl-mtext">اشعاراتي</span>
+                            <span class="notification-badge" id="all-notifications-count"
+                                style="display: none;">0</span>
+                        </a>
+                    </li>
+                @endif
+
                 @can('view_settings')
                     <!-- Settings Menu -->
                     <li
@@ -606,17 +623,6 @@
                                 </li>
                             @endcan
 
-                            @can('view_notifications')
-                                <li class="nxl-item">
-                                    <a href="{{ route('notifications.index') }}"
-                                        class="nxl-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
-                                        <span class="nxl-micon"><i class="feather-bell"></i></span>
-                                        <span class="nxl-mtext">إشعاراتي</span>
-                                        <span class="notification-badge" id="all-notifications-count"
-                                            style="display: none;">0</span>
-                                    </a>
-                                </li>
-                            @endcan
 
 
                             @can('view_admins')
@@ -738,5 +744,4 @@
 <!--! ================================================================ !-->
 <!--! [End] Navigation Menu !-->
 <!--! ================================================================ !-->
-
 

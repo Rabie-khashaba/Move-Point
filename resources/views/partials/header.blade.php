@@ -80,7 +80,12 @@
                 </div>
 
                 <!-- Notifications -->
-                @can('view_notifications')
+                @php
+                    $headerUserType = strtolower(trim((string) auth()->user()->type));
+                    $showHeaderNotifications = in_array($headerUserType, ['admin', 'employee'], true)
+                        || auth()->user()->hasAnyRole(['admin', 'employee']);
+                @endphp
+                @if($showHeaderNotifications)
                 <div class="dropdown nxl-h-item nxl-header-notification">
                     <a href="javascript:void(0);" class="nxl-head-link me-0 position-relative" data-bs-toggle="dropdown" data-bs-auto-close="outside">
                         <i class="feather-bell"></i>
@@ -115,7 +120,7 @@
                         </div>
                     </div>
                 </div>
-                @endcan
+                @endif
                 <div class="dropdown nxl-h-item">
                     <a href="javascript:void(0)" data-bs-toggle="dropdown" role="button" data-bs-auto-close="outside">
                         <img src="{{ asset('assets/images/user.png') }}" alt="صورة المستخدم" class="img-fluid user-avtar me-0" />

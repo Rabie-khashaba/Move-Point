@@ -183,8 +183,8 @@ class NotificationService
         ];
 
         if ($action === 'created') {
-            // Only notify admins for new requests
-            $this->notifyUserTypes(['admin'], $title, $body, 'leave_request', $data);
+            // Notify admins and employees for new requests
+            $this->notifyUserTypes(['admin', 'employee'], $title, $body, 'leave_request', $data);
         } else {
             // Notify the requester for approval/rejection
             $requesterId = $this->getRequesterId($leaveRequest);
@@ -223,8 +223,8 @@ class NotificationService
         ];
 
         if ($action === 'created') {
-            // Only notify admins for new requests
-            $this->notifyUserTypes(['admin'], $title, $body, 'advance_request', $data);
+            // Notify admins and employees for new requests
+            $this->notifyUserTypes(['admin', 'employee'], $title, $body, 'advance_request', $data);
         } else {
             // Notify the requester for approval/rejection
             $requesterId = $this->getRequesterId($advanceRequest);
@@ -263,8 +263,8 @@ class NotificationService
         ];
 
         if ($action === 'created') {
-            // Only notify admins for new requests
-            $this->notifyUserTypes(['admin'], $title, $body, 'resignation_request', $data);
+            // Notify admins and employees for new requests
+            $this->notifyUserTypes(['admin', 'employee'], $title, $body, 'resignation_request', $data);
         } else {
             // Notify the requester for approval/rejection
             $requesterId = $this->getRequesterId($resignationRequest);
@@ -304,8 +304,8 @@ class NotificationService
         ];
 
         if ($action === 'created') {
-            // Only notify admins for new requests
-            $this->notifyUserTypes(['admin'], $title, $body, 'delivery_deposit', $data);
+            // Notify admins and employees for new requests
+            $this->notifyUserTypes(['admin', 'employee'], $title, $body, 'delivery_deposit', $data);
         } else {
             // Notify the requester for approval/rejection
             $requesterId = $this->getRequesterId($deliveryDeposit);

@@ -651,9 +651,9 @@ $(document).ready(function() {
 });
 
 function sendNotification(type, data, modalId) {
-    const url = type === 'all' ? '/notifications/send-to-all' :
-                type === 'user-type' ? '/notifications/send-to-user-type' :
-                '/notifications/send-to-users';
+    const url = type === 'all' ? '/admin-notifications/send-to-all' :
+                type === 'user-type' ? '/admin-notifications/send-to-user-type' :
+                '/admin-notifications/send-to-users';
     
     console.log('Sending notification to:', url);
     console.log('Data:', data);
@@ -709,7 +709,7 @@ function sendNotification(type, data, modalId) {
 function deleteNotification(id) {
     if (confirm('هل أنت متأكد من حذف هذا الإشعار؟')) {
         $.ajax({
-            url: `/notifications/${id}`,
+            url: `/admin-notifications/${id}`,
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -733,7 +733,7 @@ function deleteNotification(id) {
 function bulkDeleteNotifications(ids) {
     if (confirm(`هل أنت متأكد من حذف ${ids.length} إشعار؟`)) {
         $.ajax({
-            url: '/notifications/bulk-delete',
+            url: '/admin-notifications/bulk-delete',
             method: 'POST',
             data: {
                 notification_ids: ids,
@@ -767,7 +767,7 @@ function updateBulkDeleteButton() {
 
 function loadStats() {
     $.ajax({
-        url: '/notifications/stats',
+        url: '/admin-notifications/stats',
         method: 'GET',
         success: function(response) {
             $('#totalNotifications').text(response.total_notifications);

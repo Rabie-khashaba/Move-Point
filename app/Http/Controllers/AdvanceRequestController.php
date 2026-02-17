@@ -87,6 +87,7 @@ class AdvanceRequestController extends Controller
             'amount' => 'required|numeric|min:0',
             'installment_months' => 'nullable|integer|min:1|max:12',
             'reason' => 'nullable|string|max:500',
+            'status' => 'required|in:pending,approved,rejected',
         ]);
 
         // Ensure only one ID is provided based on requester type
@@ -112,18 +113,18 @@ class AdvanceRequestController extends Controller
                 break;
         }
 
-        // Auto-approve if created from dashboard (employee)
-        $status = $validated['requester_type'] === 'employee' ? 'approved' : 'pending';
-        $approvedBy = $validated['requester_type'] === 'employee' ? Auth::id() : null;
-        $approvedAt = $validated['requester_type'] === 'employee' ? now() : null;
-        $monthlyInstallment = $validated['amount'] / $validated['installment_months'];
+        $status = $validated['status'];
+        $approvedBy = $status === 'approved' ? Auth::id() : null;
+        $approvedAt = $status === 'approved' ? now() : null;
+        $installmentMonths = $validated['installment_months'] ?? 1;
+        $monthlyInstallment = $validated['amount'] / $installmentMonths;
 
         $advanceRequest = AdvanceRequest::create([
             'employee_id' => $validated['requester_type'] === 'employee' ? $requesterId : null,
             'representative_id' => $validated['requester_type'] === 'representative' ? $requesterId : null,
             'supervisor_id' => $validated['requester_type'] === 'supervisor' ? $requesterId : null,
             'amount' => $validated['amount'],
-            'installment_months' => $validated['installment_months'],
+            'installment_months' => $installmentMonths,
             'monthly_installment' => $monthlyInstallment,
             'reason' => $validated['reason'],
             'status' => $status,

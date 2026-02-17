@@ -1044,12 +1044,21 @@ class MobileRequestController extends Controller
     public function createAdvance(Request $request)
     {
         $request->validate([
-            'amount' => 'required|numeric|min:0',
+            'amount' => 'required|numeric|min:0|max:5000',
             'installment_months' => 'nullable|integer|min:1|max:12',
-            'reason' => 'nullable|string|max:500'
+            'reason' => 'nullable|string|max:500',
+            'wallet_number' => 'required|string|max:255',
+        ], [
+            'amount.max' => 'اقصى حد لطلب السلفة هو 5000.',
+            'wallet_number.required' => 'رقم المحفظة مطلوب.',
         ]);
 
         $user = $request->user();
+
+        $dayOfMonth = now()->day;
+        if ($dayOfMonth < 15 || $dayOfMonth > 20) {
+            return response()->json(['message' => 'موعد السلفة من 15 ل 20 من كل شهر'], 422);
+        }
 
         // السماح فقط للمندوبين والمشرفين بطلب السلفة
         if (!in_array($user->type, ['representative', 'supervisor'])) {
@@ -1065,10 +1074,10 @@ class MobileRequestController extends Controller
             if ($hasAdvanceThisMonth) {
                 return response()->json(['message' => 'لا يمكن طلب أكثر من سلفة واحدة في نفس الشهر'], 403);
             }
-            $max = 20000 * 0.8;
-            if ($request->amount > $max) {
-                return response()->json(['message' => 'المبلغ يتجاوز الحد الأقصى (80% من الراتب)'], 403);
-            }
+            // $max = 20000 * 0.8;
+            // if ($request->amount > $max) {
+            //     return response()->json(['message' => 'المبلغ يتجاوز الحد الأقصى (80% من الراتب)'], 403);
+            // }
         }
         if ($user->type === 'supervisor' && $user->supervisor) {
             // منع أكثر من سلفة واحدة في نفس الشهر
@@ -1080,10 +1089,10 @@ class MobileRequestController extends Controller
             if ($hasAdvanceThisMonth) {
                 return response()->json(['message' => 'لا يمكن طلب أكثر من سلفة واحدة في نفس الشهر'], 403);
             }
-            $max = 20000 * 0.8;
-            if ($request->amount > $max) {
-                return response()->json(['message' => 'المبلغ يتجاوز الحد الأقصى (80% من الراتب)'], 403);
-            }
+            // $max = 20000 * 0.8;
+            // if ($request->amount > $max) {
+            //     return response()->json(['message' => 'المبلغ يتجاوز الحد الأقصى (80% من الراتب)'], 403);
+            // }
         }
 
         // Set default installment months to 1 if not provided
@@ -1102,6 +1111,10 @@ class MobileRequestController extends Controller
 
         // ربط الطلب بنوع المستخدم المناسب
         if ($user->type === 'representative' && $user->representative) {
+            // Keep representative wallet synced with the wallet entered on advance request
+            $user->representative->update([
+                'bank_account' => $request->wallet_number,
+            ]);
             $advanceData['representative_id'] = $user->representative->id;
         } elseif ($user->type === 'supervisor' && $user->supervisor) {
             $advanceData['supervisor_id'] = $user->supervisor->id;
@@ -1435,7 +1448,7 @@ class MobileRequestController extends Controller
                 $query->where('supervisor_id', $user->supervisor->id);
             }
         })
-        ->select(['id', 'amount', 'installment_months', 'monthly_installment', 'reason', 'status', 'rejection_reason', 'created_at', 'updated_at'])
+        ->select(['id', 'amount', 'wallet_number', 'installment_months', 'monthly_installment', 'reason', 'status', 'rejection_reason', 'created_at', 'updated_at'])
         ->orderBy('created_at', 'desc')
         ->get();
 
@@ -1558,7 +1571,7 @@ class MobileRequestController extends Controller
 
             'last_advance_request' => AdvanceRequest::where($whereClause)
                 ->orderBy('created_at', 'desc')
-                ->first(['id', 'amount', 'installment_months', 'monthly_installment', 'reason', 'rejection_reason', 'status', 'created_at']),
+                ->first(['id', 'amount', 'wallet_number', 'installment_months', 'monthly_installment', 'reason', 'rejection_reason', 'status', 'created_at']),
 
             'last_resignation_request' => ResignationRequest::where($whereClause)
                 ->orderBy('created_at', 'desc')
@@ -1633,7 +1646,7 @@ class MobileRequestController extends Controller
 
         $advanceRequest = \App\Models\AdvanceRequest::where($filterByUser)
             ->latest('created_at')
-            ->first(['id', 'amount', 'installment_months', 'monthly_installment', 'status', 'rejection_reason', 'created_at']);
+            ->first(['id', 'amount', 'wallet_number', 'installment_months', 'monthly_installment', 'status', 'rejection_reason', 'created_at']);
 
         $resignationRequest = \App\Models\ResignationRequest::where($filterByUser)
             ->latest('created_at')

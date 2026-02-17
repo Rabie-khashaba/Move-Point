@@ -188,7 +188,7 @@
                                                     <span class="badge bg-secondary">دفعة واحدة</span>
                                                 @endif
                                             </td>
-                                           <td>
+                                            <td>
                                                 @if($advance->representative?->governorate?->name)
                                                     <strong>{{ $advance->representative->governorate->name }}</strong><br>
                                                     <small class="text-muted">{{ $advance->representative->location->name ?? 'غير محدد' }}</small>

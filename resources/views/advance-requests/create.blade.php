@@ -37,7 +37,7 @@
 
                         <form action="{{ route('advance-requests.store') }}" method="POST">
                             @csrf
-                            
+
                             <!-- Requester Type Selection -->
                             <div class="mb-4">
                                 <label class="form-label">نوع مقدم الطلب <span class="text-danger">*</span></label>
@@ -72,7 +72,7 @@
                             <!-- Representative Selection -->
                             <div class="mb-3" id="representative_selection">
                                 <label class="form-label">اختر المندوب <span class="text-danger">*</span></label>
-                                <select name="representative_id" class="form-control" id="representative_id">
+                                <select name="representative_id" class="form-control select2" id="representative_id">
                                     <option value="">اختر المندوب</option>
                                     @foreach(\App\Models\Representative::all() as $representative)
                                         <option value="{{ $representative->id }}" {{ old('representative_id') == $representative->id ? 'selected' : '' }}>
@@ -80,6 +80,7 @@
                                         </option>
                                     @endforeach
                                 </select>
+                                <small class="text-muted">يمكن البحث بالاسم أو رقم الهاتف</small>
                             </div>
 
                             <!-- Employee Selection -->
@@ -125,6 +126,15 @@
                             </div>
 
                             <div class="mb-3">
+                                <label class="form-label">الحالة <span class="text-danger">*</span></label>
+                                <select name="status" class="form-control" required>
+                                    <option value="pending" {{ old('status', 'pending') == 'pending' ? 'selected' : '' }}>قيد المراجعة</option>
+                                    <option value="approved" {{ old('status') == 'approved' ? 'selected' : '' }}>مقبول</option>
+                                    <option value="rejected" {{ old('status') == 'rejected' ? 'selected' : '' }}>مرفوض</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label">السبب </span></label>
                                 <textarea name="reason" class="form-control" rows="4"  placeholder="أدخل سبب طلب السلف...">{{ old('reason') }}</textarea>
                             </div>
@@ -163,19 +173,30 @@ document.addEventListener('DOMContentLoaded', function() {
     const employeeSelection = document.getElementById('employee_selection');
     const supervisorSelection = document.getElementById('supervisor_selection');
 
+    if (typeof $ !== 'undefined' && $('#representative_id').length) {
+        $('#representative_id').select2({
+            placeholder: 'اختر المندوب أو ابحث برقم الهاتف',
+            allowClear: true,
+            width: '100%'
+        });
+    }
+
     function updateSelectionVisibility() {
         const selectedType = document.querySelector('input[name="requester_type"]:checked').value;
-        
+
         // Hide all selections
         representativeSelection.style.display = 'none';
         employeeSelection.style.display = 'none';
         supervisorSelection.style.display = 'none';
-        
+
         // Clear all values
         document.getElementById('representative_id').value = '';
         document.getElementById('employee_id').value = '';
         document.getElementById('supervisor_id').value = '';
-        
+        if (typeof $ !== 'undefined' && $('#representative_id').length) {
+            $('#representative_id').trigger('change.select2');
+        }
+
         // Show selected type
         switch(selectedType) {
             case 'representative':

@@ -7,14 +7,16 @@ use App\Models\ResignationRequest;
 use App\Models\ResignationRequestNote;
 use App\Models\Employee;
 use App\Models\Debt;
+use App\Models\DebtSheet;
 use App\Models\Representative;
 use App\Models\Supervisor;
 use App\Models\Company;
+use App\Models\ResignationMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Services\FirebaseNotificationService;
 use App\Services\NotificationService;
-use App\Services\WhatsAppWorkService;
+use App\Services\WhatsAppServicebyair;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -35,7 +37,7 @@ class ResignationRequestController extends Controller
     {
         $this->authorize('view_resignation_requests');
 
-        $resignations = ResignationRequest::with(['employee.department', 'employee.company', 'representative.company', 'supervisor.company', 'approver'])
+        $resignations = ResignationRequest::with(['employee.department', 'employee.company', 'representative.company', 'supervisor.company', 'approver', 'latestNote'])
             ->when(request('search'), function($query, $search) {
                 $query->whereHas('employee', function($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%");
@@ -133,6 +135,7 @@ class ResignationRequestController extends Controller
         $departments = \App\Models\Department::all();
         $governorates = \App\Models\Governorate::all();
         $companies = Company::where('is_active', true)->get();
+        $resignationMessages = ResignationMessage::latest()->get();
         $companyResignationStats = $companies->map(function ($company) use ($statsQuery) {
             $count = (clone $statsQuery)->where(function ($q) use ($company) {
                 $q->whereHas('employee', function ($emp) use ($company) {
@@ -158,6 +161,7 @@ class ResignationRequestController extends Controller
             'departments',
             'governorates',
             'companies',
+            'resignationMessages',
             'companyResignationStats',
             'totalResignations'
         ));
@@ -221,7 +225,7 @@ class ResignationRequestController extends Controller
 
         $resignation = ResignationRequest::findOrFail($id);
 
-        if ($resignation->status !== 'pending') {
+        if (!in_array($resignation->status, ['pending', 'initial_approved'], true)) {
             return back()->with('error', 'لا يمكن الموافقة على طلب تمت معالجته مسبقاً');
         }
 
@@ -232,37 +236,27 @@ class ResignationRequestController extends Controller
         ]);
 
         // منع الموافقة إذا كان على الموظف / المندوب / المشرف مديونية غير مسددة
-        $hasUnpaidDebt = Debt::where('status', 'لم يسدد')
-            ->where(function ($q) use ($resignation) {
-                if ($resignation->employee_id) {
-                    $q->orWhere('employee_id', $resignation->employee_id);
-                }
-                if ($resignation->representative_id) {
-                    $q->orWhere('representative_id', $resignation->representative_id);
-                }
-                if ($resignation->supervisor_id) {
-                    $q->orWhere('supervisor_id', $resignation->supervisor_id);
-                }
-            })
-            ->exists();
+        $hasUnpaidDebt = $this->hasOutstandingDebt($resignation);
 
         if ($hasUnpaidDebt) {
             $message = 'لا يمكن الموافقة على طلب الاستقالة لوجود مديونية غير مسددة. يرجى تسوية المديونية أولاً.';
 
 
 
-            $whatsAppService = app(WhatsAppWorkService::class);
+            $whatsapp = app(WhatsAppServicebyair::class);
+            $employee = auth()->user()?->employee;
+            $deviceToken = $employee?->device?->device_token;
 
             if ($resignation->employee && $resignation->employee->phone) {
-                $whatsAppService->send($resignation->employee->phone, $message . "\n\nالموعد: " . $validated['appointment_date'] . "\nالمكان: " . $validated['payment_location']);
+                $whatsapp->send2($resignation->employee->phone, $message . "\n\nالموعد: " . $validated['appointment_date'] . "\nالمكان: " . $validated['payment_location'], null, null, null, $deviceToken);
             }
 
             if ($resignation->representative && $resignation->representative->phone) {
-                $whatsAppService->send($resignation->representative->phone, $message . "\n\nالموعد: " . $validated['appointment_date'] . "\nالمكان: " . $validated['payment_location']);
+                $whatsapp->send2($resignation->representative->phone, $message . "\n\nالموعد: " . $validated['appointment_date'] . "\nالمكان: " . $validated['payment_location'], null, null, null, $deviceToken);
             }
 
             if ($resignation->supervisor && $resignation->supervisor->phone) {
-                $whatsAppService->send($resignation->supervisor->phone, $message . "\n\nالموعد: " . $validated['appointment_date'] . "\nالمكان: " . $validated['payment_location']);
+                $whatsapp->send2($resignation->supervisor->phone, $message . "\n\nالموعد: " . $validated['appointment_date'] . "\nالمكان: " . $validated['payment_location'], null, null, null, $deviceToken);
             }
 
             return back()->with('error', 'لا يمكن الموافقة على طلب الاستقالة لوجود مديونية غير مسددة. يرجى تسوية المديونية أولاً.');
@@ -302,7 +296,9 @@ class ResignationRequestController extends Controller
             // إرسال رسالة بالموعد لاستلام الأوراق
             $message = "تم تحديد موعد لاستلام الأوراق:\nالتاريخ: {$validated['appointment_date']}\nالمكان: {$validated['payment_location']}";
 
-            $whatsAppService = app(WhatsAppWorkService::class);
+            $whatsapp = app(WhatsAppServicebyair::class);
+            $employee = auth()->user()?->employee;
+            $deviceToken = $employee?->device?->device_token;
 
             $phones = [
                 $resignation->employee?->phone,
@@ -312,7 +308,7 @@ class ResignationRequestController extends Controller
             ];
 
             foreach (array_filter($phones) as $phone) {
-                $whatsAppService->send($phone, $message);
+                $whatsapp->send2($phone, $message, null, null, null, $deviceToken);
             }
         }
 
@@ -322,11 +318,54 @@ class ResignationRequestController extends Controller
         try {
             $this->notificationService->notifyResignationRequest($resignation, 'approved');
         } catch (\Exception $e) {
-            Log::error('Failed to create resignation request approval notification: ' . $e->getMessage());
+            \Log::error('Failed to create resignation request approval notification: ' . $e->getMessage());
         }
 
         return redirect()->route('resignation-requests.index')
             ->with('success', 'تم الموافقة على طلب الاستقالة بنجاح!');
+    }
+
+    public function initialApprove(Request $request, $id)
+    {
+        $this->authorize('approve_resignation_requests');
+
+        $validated = $request->validate([
+            'message_id' => 'required|exists:resignation_messages,id',
+        ]);
+
+        $resignation = ResignationRequest::with(['employee', 'representative', 'supervisor'])->findOrFail($id);
+
+        if ($resignation->status !== 'pending') {
+            return back()->with('error', 'لا يمكن تنفيذ الموافقة المبدئية على طلب تمت معالجته مسبقاً');
+        }
+
+        $hasUnpaidDebt = $this->hasOutstandingDebt($resignation);
+
+        if ($hasUnpaidDebt) {
+            return back()->with('error', 'لا يمكن إرسال الموافقة المبدئية لوجود مديونية غير مسددة. يرجى تسوية المديونية أولاً.');
+        }
+
+        $resignationMessage = ResignationMessage::findOrFail($validated['message_id']);
+
+        $resignation->update([
+            'status' => 'initial_approved',
+            'approved_by' => Auth::id(),
+            'approved_at' => now(),
+        ]);
+
+        $whatsapp = app(WhatsAppServicebyair::class);
+        $employee = auth()->user()?->employee;
+        $deviceToken = $employee?->device?->device_token;
+        $phones = [
+            $resignation->employee?->phone,
+            $resignation->representative?->phone,
+            $resignation->supervisor?->phone,
+        ];
+        foreach (array_filter($phones) as $phone) {
+            $whatsapp->send2($phone, $resignationMessage->content, null, null, null, $deviceToken);
+        }
+
+        return back()->with('success', 'تمت الموافقة المبدئية وإرسال الرسالة بنجاح.');
     }
 
     public function reject(Request $request, $id)
@@ -513,11 +552,20 @@ class ResignationRequestController extends Controller
         return response()->json([
             'success' => true,
             'notes' => $notes->map(function ($note) {
+                $statusMap = [
+                    'approved' => ['text' => 'موافق', 'class' => 'success'],
+                    'rejected' => ['text' => 'غير موافق', 'class' => 'danger'],
+                    'no_reply' => ['text' => 'لم يرد', 'class' => 'warning'],
+                    'follow_up_again' => ['text' => 'متابعة مرة أخرى', 'class' => 'info'],
+                    'other' => ['text' => 'أخرى', 'class' => 'secondary'],
+                ];
+
                 return [
                     'id' => $note->id,
                     'note' => $note->note,
                     'status' => $note->status,
-                    'status_text' => $note->status === 'approved' ? 'موافق' : ($note->status === 'rejected' ? 'غير موافق' : null),
+                    'status_text' => $statusMap[$note->status]['text'] ?? null,
+                    'status_class' => $statusMap[$note->status]['class'] ?? 'secondary',
                     'created_by' => $note->createdBy?->name ?? 'غير محدد',
                     'created_at' => $note->created_at->format('Y-m-d H:i'),
                     'created_at_formatted' => $note->created_at->diffForHumans(),
@@ -532,7 +580,7 @@ class ResignationRequestController extends Controller
 
         $validated = $request->validate([
             'note' => 'required|string|max:5000',
-            //'status' => 'nullable|in:approved,rejected',
+            'status' => 'required|in:no_reply,follow_up_again,other',
         ]);
 
         $resignation = ResignationRequest::findOrFail($id);
@@ -542,7 +590,7 @@ class ResignationRequestController extends Controller
             $note = ResignationRequestNote::create([
                 'resignation_request_id' => $resignation->id,
                 'note' => $validated['note'],
-                'status' => $validated['status'] ?? null,
+                'status' => $validated['status'],
                 'created_by' => Auth::id(),
             ]);
 
@@ -586,8 +634,12 @@ class ResignationRequestController extends Controller
                 'note' => [
                     'id' => $note->id,
                     'note' => $note->note,
-                    //'status' => $note->status,
-                    //'status_text' => $note->status === 'approved' ? 'موافق' : ($note->status === 'rejected' ? 'غير موافق' : null),
+                    'status' => $note->status,
+                    'status_text' => [
+                        'no_reply' => 'لم يرد',
+                        'follow_up_again' => 'متابعة مرة أخرى',
+                        'other' => 'أخرى',
+                    ][$note->status] ?? null,
                     'created_by' => $note->createdBy?->name ?? 'غير محدد',
                     'created_at' => $note->created_at->format('Y-m-d H:i'),
                     'created_at_formatted' => $note->created_at->diffForHumans(),
@@ -628,6 +680,40 @@ class ResignationRequestController extends Controller
             ->values();
 
         return view('resignation-requests.report', compact('activeByStats'));
+    }
+
+    private function hasOutstandingDebt(ResignationRequest $resignation): bool
+    {
+        $hasDebtRecord = Debt::where('status', 'لم يسدد')
+            ->where(function ($q) use ($resignation) {
+                if ($resignation->employee_id) {
+                    $q->orWhere('employee_id', $resignation->employee_id);
+                }
+                if ($resignation->representative_id) {
+                    $q->orWhere('representative_id', $resignation->representative_id);
+                }
+                if ($resignation->supervisor_id) {
+                    $q->orWhere('supervisor_id', $resignation->supervisor_id);
+                }
+            })
+            ->exists();
+
+        $code = $resignation->employee?->code
+            ?? $resignation->representative?->code
+            ?? $resignation->supervisor?->code;
+
+        $hasDebtSheetValues = false;
+        if (!empty($code)) {
+            $hasDebtSheetValues = DebtSheet::where('star_id', (string) $code)
+                ->where(function ($q) {
+                    $q->where('shortage', '>', 0)
+                        ->orWhere('credit_note', '>', 0)
+                        ->orWhere('advances', '>', 0);
+                })
+                ->exists();
+        }
+
+        return $hasDebtRecord || $hasDebtSheetValues;
     }
 
 }

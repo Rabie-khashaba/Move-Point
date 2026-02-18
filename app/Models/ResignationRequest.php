@@ -60,6 +60,11 @@ class ResignationRequest extends Model
         return $this->hasMany(ResignationRequestNote::class)->orderBy('created_at', 'desc');
     }
 
+    public function latestNote()
+    {
+        return $this->hasOne(ResignationRequestNote::class)->latestOfMany();
+    }
+
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
@@ -84,6 +89,7 @@ class ResignationRequest extends Model
     {
         return [
             'pending' => 'في الانتظار',
+            'initial_approved' => 'موافقة مبدئية',
             'approved' => 'تمت الموافقة',
             'rejected' => 'مرفوض',
             'unresign' => 'تم الرجوع للعمل'

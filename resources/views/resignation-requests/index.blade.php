@@ -171,6 +171,7 @@
                         <select name="status" class="form-control">
                             <option value="">جميع الحالات</option>
                             <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>في الانتظار</option>
+                            <option value="initial_approved" {{ request('status') === 'initial_approved' ? 'selected' : '' }}>موافقة مبدئية</option>
                             <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>تمت الموافقة</option>
                             <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>مرفوض</option>
                             <option value="unresign" {{ request('status') === 'unresign' ? 'selected' : '' }}>تم الرجوع للعمل</option>
@@ -242,8 +243,9 @@
                                             <!--<th>فترة الإشعار</th>-->
                                             <th>السبب</th>
                                             <th>المصدر</th>
-                                             <th>المديونية</th>
+                                            <th>المديونية</th>
                                             <th>الحالة</th>
+                                            <th>آخر حالة متابعة</th>
                                             <th>تاريخ الطلب</th>
                                             <th>الإجراءات</th>
                                         </tr>
@@ -290,20 +292,28 @@
                                             </td>
                                             <td>
                                                 @php
-                                                    $hasUnpaidDebt =
-                                                        ($resignation->employee && $resignation->employee->debits->where('status', 'لم يسدد')->isNotEmpty()) ||
-                                                        ($resignation->representative && $resignation->representative->debits->where('status', 'لم يسدد')->isNotEmpty()) ||
-                                                        ($resignation->supervisor && $resignation->supervisor->debits->where('status', 'لم يسدد')->isNotEmpty());
+                                                    $sheetDebtTotal = 0;
+                                                    if (!empty($requesterCode) && $requesterCode !== 'غير محدد') {
+                                                        $sheetDebtRows = \App\Models\DebtSheet::where('star_id', (string) $requesterCode)
+                                                            ->where(function ($q) {
+                                                                $q->where('shortage', '>', 0)
+                                                                    ->orWhere('credit_note', '>', 0)
+                                                                    ->orWhere('advances', '>', 0);
+                                                            })
+                                                            ->get(['shortage', 'credit_note', 'advances']);
 
+                                                        $sheetDebtTotal = $sheetDebtRows->sum(function ($row) {
+                                                            return (float) $row->shortage
+                                                                + (float) $row->credit_note
+                                                                + (float) $row->advances;
+                                                        });
+                                                    }
 
-                                                    $debit =
-                                                    $resignation->employee?->debits->where('status', 'لم يسدد')->first()
-                                                    ?? $resignation->representative?->debits->where('status', 'لم يسدد')->first()
-                                                    ?? $resignation->supervisor?->debits->where('status', 'لم يسدد')->first();
+                                                    $hasUnpaidDebt = ($sheetDebtTotal > 0);
                                                 @endphp
 
-                                                @if($debit)
-                                                <span class="badge bg-info">{{ $debit->loan_amount }}</span>
+                                                @if($sheetDebtTotal > 0)
+                                                    <span class="badge bg-info">{{ number_format($sheetDebtTotal, 2) }}</span>
                                                 @else
                                                     <span class="badge bg-success">لا توجد مديونية</span>
                                                 @endif
@@ -311,12 +321,34 @@
                                             <td>
                                                 @if($resignation->status === 'pending')
                                                     <span class="badge bg-warning">في الانتظار</span>
+                                                @elseif($resignation->status === 'initial_approved')
+                                                    <span class="badge bg-info">موافقة مبدئية</span>
                                                 @elseif($resignation->status === 'approved')
                                                     <span class="badge bg-success">تمت الموافقة</span>
                                                 @elseif($resignation->status === 'unresign')
                                                     <span class="badge bg-success">تم الرجوع للعمل</span>
                                                 @else
                                                     <span class="badge bg-danger">مرفوض</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @php
+                                                    $latestNoteStatusMap = [
+                                                        'no_reply' => ['text' => 'لم يرد', 'class' => 'warning'],
+                                                        'follow_up_again' => ['text' => 'متابعة مرة أخرى', 'class' => 'info'],
+                                                        'other' => ['text' => 'أخرى', 'class' => 'secondary'],
+                                                        'approved' => ['text' => 'موافق', 'class' => 'success'],
+                                                        'rejected' => ['text' => 'غير موافق', 'class' => 'danger'],
+                                                    ];
+                                                    $latestNoteStatus = $resignation->latestNote?->status;
+                                                @endphp
+
+                                                @if($latestNoteStatus && isset($latestNoteStatusMap[$latestNoteStatus]))
+                                                    <span class="badge bg-{{ $latestNoteStatusMap[$latestNoteStatus]['class'] }}">
+                                                        {{ $latestNoteStatusMap[$latestNoteStatus]['text'] }}
+                                                    </span>
+                                                @else
+                                                    <span class="text-muted">-</span>
                                                 @endif
                                             </td>
                                             <td>{{ $resignation->created_at ? $resignation->created_at->format('Y-m-d') : '-' }}</td>
@@ -328,37 +360,48 @@
                                                         ?? $resignation->employee
                                                         ?? $resignation->supervisor;
                                                 @endphp
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                                        <i class="feather-more-horizontal"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu">
-                                                        @can('view_resignation_requests')
-                                                        <li><a class="dropdown-item" href="{{ route('resignation-requests.show', $resignation->id) }}">
-                                                            <i class="feather-eye me-2"></i>عرض
-                                                        </a></li>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    @can('view_resignation_requests')
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-primary"
+                                                                onclick="viewResignationDetails(this)"
+                                                                data-id="{{ $resignation->id }}"
+                                                                data-name="{{ $requesterName }}"
+                                                                data-phone="{{ $resignation->employee?->phone ?? $resignation->representative?->phone ?? $resignation->supervisor?->phone ?? '' }}"
+                                                                data-status="{{ $resignation->status_text }}"
+                                                                data-status-code="{{ $resignation->status }}"
+                                                                data-reason="{{ e($resignation->reason) }}"
+                                                                data-resign-date="{{ $resignation->resignation_date ? $resignation->resignation_date->format('Y-m-d') : '-' }}"
+                                                                data-last-day="{{ $resignation->last_working_day ? $resignation->last_working_day->format('Y-m-d') : '-' }}"
+                                                                data-hasunpaid="{{ $hasUnpaidDebt ? '1' : '0' }}">
+                                                            <i class="feather-file-text me-1"></i>المتابعة
+                                                        </button>
+                                                    @endcan
 
+                                                    <div class="dropdown">
+                                                        <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                            <i class="feather-more-horizontal"></i>
+                                                        </button>
+                                                        <ul class="dropdown-menu">
+                                                            @can('view_resignation_requests')
+                                                            <li><a class="dropdown-item" href="{{ route('resignation-requests.show', $resignation->id) }}">
+                                                                <i class="feather-eye me-2"></i>عرض
+                                                            </a></li>
+                                                            @endcan
 
-                                                        <li>
-                                                            <button type="button"
-                                                                    class="dropdown-item"
-                                                                    onclick="viewResignationDetails(this)"
-                                                                    data-id="{{ $resignation->id }}"
-                                                                    data-name="{{ $requesterName }}"
-                                                                    data-phone="{{ $resignation->employee?->phone ?? $resignation->representative?->phone ?? $resignation->supervisor?->phone ?? '' }}"
-                                                                    data-status="{{ $resignation->status_text }}"
-                                                                    data-status-code="{{ $resignation->status }}"
-                                                                    data-reason="{{ e($resignation->reason) }}"
-                                                                    data-resign-date="{{ $resignation->resignation_date ? $resignation->resignation_date->format('Y-m-d') : '-' }}"
-                                                                    data-last-day="{{ $resignation->last_working_day ? $resignation->last_working_day->format('Y-m-d') : '-' }}"
-                                                                    data-hasunpaid="{{ $hasUnpaidDebt ? '1' : '0' }}">
-                                                                <i class="feather-file-text me-2"></i>تفاصيل الطلب
-                                                            </button>
-                                                        </li>
-                                                        @endcan
-
-                                                        @if($resignation->status === 'pending')
+                                                        @if(in_array($resignation->status, ['pending', 'initial_approved']))
                                                             @can('approve_resignation_requests')
+                                                            @if($resignation->status === 'pending')
+                                                            <li>
+                                                                <button type="button"
+                                                                        class="dropdown-item text-info"
+                                                                        onclick="openInitialApproveModal(this)"
+                                                                        data-id="{{ $resignation->id }}"
+                                                                        data-hasunpaid="{{ $hasUnpaidDebt ? '1' : '0' }}">
+                                                                    <i class="feather-alert-circle me-2"></i>موافقة مبدئية
+                                                                </button>
+                                                            </li>
+                                                            @endif
                                                             <li>
                                                                 {{-- <form action="{{ route('resignation-requests.approve', $resignation->id) }}" method="POST" class="d-inline">
                                                                     @csrf
@@ -373,7 +416,7 @@
                                                                         data-bs-target="#approveModal"
                                                                         data-id="{{ $resignation->id }}"
                                                                         data-hasunpaid="{{ $hasUnpaidDebt ? '1' : '0' }}">
-                                                                    <i class="feather-check me-2"></i>موافقة
+                                                                    <i class="feather-check me-2"></i>موافقة نهائية
                                                                 </button>
                                                             </li>
                                                             <li>
@@ -414,7 +457,8 @@
                                                             </form>
                                                         </li>
                                                         @endcan
-                                                    </ul>
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
@@ -549,6 +593,15 @@
                         </div>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">الحالة <span class="text-danger">*</span></label>
+                        <select id="newNoteStatus" class="form-select">
+                            <option value="">اختر الحالة</option>
+                            <option value="no_reply">لم يرد</option>
+                            <option value="follow_up_again">متابعة مرة أخرى</option>
+                            <option value="other">أخرى</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">إضافة ملاحظة جديدة <span class="text-danger">*</span></label>
                         <textarea id="newNoteText" class="form-control" rows="3" placeholder="أدخل ملاحظة جديدة....."></textarea>
                     </div>
@@ -585,7 +638,7 @@
                     let notesHtml = '';
                     data.notes.forEach(note => {
                         const statusBadge = note.status_text ?
-                            `<span class="badge bg-${note.status === 'approved' ? 'success' : 'danger'} ms-2">${note.status_text}</span>` : '';
+                            `<span class="badge bg-${note.status_class || 'secondary'} ms-2">${note.status_text}</span>` : '';
                         notesHtml += `
                             <div class="card mb-3">
                                 <div class="card-body">
@@ -613,12 +666,43 @@
             });
     }
 
+    function openInitialApproveModal(button) {
+        const hasUnpaid = button.getAttribute('data-hasunpaid') === '1';
+        if (hasUnpaid) {
+            alert('لا يمكن إرسال الموافقة المبدئية لوجود مديونية غير مسددة. يرجى تسوية المديونية أولاً.');
+            return;
+        }
+
+        const id = button.getAttribute('data-id');
+        const modalEl = document.getElementById('initialApproveModal');
+        if (!modalEl) {
+            return;
+        }
+
+        const form = modalEl.querySelector('form');
+        form.action = "{{ route('resignation-requests.initial-approve', '__id__') }}".replace('__id__', id);
+
+        const messageSelect = modalEl.querySelector('[name=\"message_id\"]');
+        if (messageSelect) {
+            messageSelect.value = '';
+        }
+
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+
     function saveNote(resignationId) {
         const noteText = document.getElementById('newNoteText').value.trim();
+        const noteStatus = document.getElementById('newNoteStatus')?.value;
 
         if (!noteText) {
             alert('يرجى إدخال ملاحظة');
             document.getElementById('newNoteText').focus();
+            return;
+        }
+        if (!noteStatus) {
+            alert('يرجى اختيار الحالة');
+            document.getElementById('newNoteStatus')?.focus();
             return;
         }
 
@@ -637,7 +721,8 @@
                 'Accept': 'application/json'
             },
             body: JSON.stringify({
-                note: noteText
+                note: noteText,
+                status: noteStatus
             })
         })
         .then(res => res.json())
@@ -792,6 +877,39 @@ document.addEventListener('DOMContentLoaded', function () {
 </div>
 
 
+<!-- Initial Approval Modal -->
+<div class="modal fade" id="initialApproveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">الموافقة المبدئية</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="#">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        اختر رسالة ليتم إرسالها ضمن الموافقة المبدئية.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">رسالة الاستقالة <span class="text-danger">*</span></label>
+                        <select name="message_id" class="form-select" required>
+                            <option value="">اختر الرسالة</option>
+                            @foreach($resignationMessages as $msg)
+                                <option value="{{ $msg->id }}">{{ $msg->title }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-info">إرسال الموافقة المبدئية</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal -->
     <div class="modal fade" id="StatusModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-md"> <!-- توسيط المودال وتحديد الحجم -->
@@ -855,7 +973,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="approveModalLabel">تأكيد الموافقة</h5>
+                <h5 class="modal-title" id="approveModalLabel">تأكيد الموافقة النهائية</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="POST" action="#">
@@ -874,7 +992,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-success">تأكيد الموافقة</button>
+                    <button type="submit" class="btn btn-success">تأكيد الموافقة النهائية</button>
                 </div>
             </form>
         </div>

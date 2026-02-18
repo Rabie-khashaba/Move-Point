@@ -1117,6 +1117,10 @@ class MobileRequestController extends Controller
             ]);
             $advanceData['representative_id'] = $user->representative->id;
         } elseif ($user->type === 'supervisor' && $user->supervisor) {
+             $user->representative->update([
+                'bank_account' => $request->wallet_number,
+            ]);
+
             $advanceData['supervisor_id'] = $user->supervisor->id;
         } else {
             return response()->json(['message' => 'لم يتم العثور على ملف المستخدم'], 404);

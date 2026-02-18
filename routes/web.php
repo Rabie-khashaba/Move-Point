@@ -480,6 +480,8 @@ Route::get('advance-requests/{id}/receipt', [AdvanceRequestController::class, 's
             ->name('resignation-requests.export');
 
         Route::resource('resignation-requests', ResignationRequestController::class);
+        Route::post('resignation-requests/{id}/initial-approve', [ResignationRequestController::class, 'initialApprove'])
+            ->name('resignation-requests.initial-approve');
         Route::post('resignation-requests/{id}/approve', [ResignationRequestController::class, 'approve'])
             ->name('resignation-requests.approve');
         Route::post('resignation-requests/{id}/reject', [ResignationRequestController::class, 'reject'])

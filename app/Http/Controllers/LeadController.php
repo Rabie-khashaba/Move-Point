@@ -543,17 +543,17 @@ class LeadController extends Controller
                             ->orWhere('governorates.name', 'like', "%{$term}%");
                     });
                 })
-                ->when($request->filled('governorate_id'), function ($query) use ($request) {
-                    return $query->where('leads.governorate_id', $request->governorate_id);
-                })
-                ->when($request->filled('location_id'), function ($query) use ($request) {
-                    return $query->where('leads.location_id', $request->location_id);
-                })
                 ->when($request->filled('date_from'), function ($query) use ($request) {
                     return $query->whereDate('leads.created_at', '>=', $request->date_from);
                 })
                 ->when($request->filled('date_to'), function ($query) use ($request) {
                     return $query->whereDate('leads.created_at', '<=', $request->date_to);
+                })
+                ->when($request->filled('governorate_id'), function ($query) use ($request) {
+                    return $query->where('leads.governorate_id', $request->governorate_id);
+                })
+                ->when($request->filled('location_id'), function ($query) use ($request) {
+                    return $query->where('leads.location_id', $request->location_id);
                 })
                 ->where(function ($q) {
                     $q->where(function ($q2) {
@@ -630,4 +630,3 @@ class LeadController extends Controller
         return view('leads.search', compact('lead', 'phone', 'representative'));
     }
 }
-

@@ -168,7 +168,7 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">رقم محفظة او حساب بنكي </label>
                                     <input type="text" name="bank_account" class="form-control @error('bank_account') is-invalid @enderror"
-                                           placeholder="أدخل رقم الحساب البنكي" value="{{ old('bank_account') }}" >
+                                           placeholder="أدخل رقم الحساب البنكي" value="{{ old('bank_account') }}" disabled>
                                     @error('bank_account')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror

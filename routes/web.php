@@ -37,8 +37,9 @@
     use App\Http\Controllers\PublicAccountController;
     use App\Http\Controllers\PublicRepresentativeController;
     use App\Http\Controllers\WhatsAppLogController;
-    use App\Http\Controllers\MessageTrainingController;
-    use App\Http\Controllers\MessageStartWorkingController;
+use App\Http\Controllers\MessageTrainingController;
+use App\Http\Controllers\MessageStartWorkingController;
+use App\Http\Controllers\ResignationMessageController;
     use App\Http\Controllers\RepresentativeNotCompletedController;
     use App\Http\Controllers\SupportController;
     use App\Http\Controllers\SupportReplyController;
@@ -156,6 +157,7 @@
         Route::resource('messages', MessageController::class);
         Route::resource('messagesTraining', MessageTrainingController::class);
         Route::resource('messagesWorking', MessageStartWorkingController::class);
+        Route::resource('resignation-messages', ResignationMessageController::class)->except('show');
         Route::resource('banks', BankController::class);
         
         Route::get('bank-accounts/export', [\App\Http\Controllers\BankAccountController::class, 'export'])

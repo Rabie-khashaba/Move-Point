@@ -493,14 +493,14 @@
                 @can('view_settings')
                     <!-- Settings Menu -->
                     <li
-                        class="nxl-item nxl-hasmenu {{ request()->routeIs('companies.*') || request()->routeIs('departments.*') || request()->routeIs('locations.*') || request()->routeIs('governorates.*') || request()->routeIs('sources.*') || request()->routeIs('reasons.*') || request()->routeIs('roles.*') ? 'active' : '' }}">
+                        class="nxl-item nxl-hasmenu {{ request()->routeIs('messages.*') || request()->routeIs('messagesTraining.*') || request()->routeIs('messagesWorking.*') || request()->routeIs('resignation-messages.*') || request()->routeIs('whatsapp.messages.*') || request()->routeIs('whatsapp.logs.*') ? 'active' : '' }}">
                         <a href="javascript:void(0);" class="nxl-link">
                             <span class="nxl-micon"><i class="feather-settings"></i></span>
                             <span class="nxl-mtext">الإعدادات</span>
                             <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
                         </a>
                         <ul class="nxl-submenu"
-                            style="{{ request()->routeIs('companies.*') || request()->routeIs('departments.*') || request()->routeIs('locations.*') || request()->routeIs('governorates.*') || request()->routeIs('sources.*') || request()->routeIs('reasons.*') || request()->routeIs('roles.*') ? 'display:block;' : '' }}">
+                            style="{{ request()->routeIs('messages.*') || request()->routeIs('messagesTraining.*') || request()->routeIs('messagesWorking.*') || request()->routeIs('resignation-messages.*') || request()->routeIs('whatsapp.messages.*') || request()->routeIs('whatsapp.logs.*') ? 'display:block;' : '' }}">
 
                             @can('view_companies')
                                 <li class="nxl-item">
@@ -718,6 +718,15 @@
                                         class="nxl-link {{ request()->routeIs('messagesWorking.*') ? 'active' : '' }}">
                                         <span class="nxl-micon"><i class="feather-message-square"></i></span>
                                         <span class="nxl-mtext">رسائل المخزن</span>
+                                    </a>
+                                </li>
+                            @endcan
+                            @can('view_messages')
+                                <li class="nxl-item">
+                                    <a href="{{ route('resignation-messages.index') }}"
+                                        class="nxl-link {{ request()->routeIs('resignation-messages.*') ? 'active' : '' }}">
+                                        <span class="nxl-micon"><i class="feather-message-square"></i></span>
+                                        <span class="nxl-mtext">رسائل الاستقالة</span>
                                     </a>
                                 </li>
                             @endcan

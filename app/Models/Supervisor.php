@@ -54,6 +54,11 @@ class Supervisor extends Model
         return $this->belongsTo(Governorate::class, 'governorate_id');
     }
 
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'company_id');
+    }
+
     // Many-to-many relationship with representatives
     // public function representatives()
     // {
@@ -140,4 +145,3 @@ class Supervisor extends Model
     } */
 
 }
-

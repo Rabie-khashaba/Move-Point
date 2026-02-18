@@ -39,11 +39,10 @@
     </div>
     <!-- [ page-header ] end -->
 
-
     <div id="collapseOne" class="accordion-collapse show collapse page-header-collapse ">
             <div class="accordion-body ">
                 <div class="row">
-                    <div class="col-xxl-4 col-md-6 mb-3">
+                    <div class="col-xxl-3 col-md-6 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center justify-content-between">
@@ -112,40 +111,38 @@
                         </div>
                     </div>
                     --}}
-                    <div class="col-xxl-4 col-md-6 mb-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="avatar-text avatar-xl rounded bg-primary">
-                                            <i class="feather-user-check"></i>
+                    @php
+                        $companyCardStyles = [
+                            ['bg' => 'bg-primary', 'text' => 'text-primary'],
+                            ['bg' => 'bg-success', 'text' => 'text-success'],
+                            ['bg' => 'bg-info', 'text' => 'text-info'],
+                            ['bg' => 'bg-warning', 'text' => 'text-warning'],
+                            ['bg' => 'bg-danger', 'text' => 'text-danger'],
+                            ['bg' => 'bg-dark', 'text' => 'text-dark'],
+                        ];
+                    @endphp
+                    @foreach($companyResignationStats as $companyStat)
+                        @php
+                            $style = $companyCardStyles[$loop->index % count($companyCardStyles)];
+                        @endphp
+                        <div class="col-xxl-3 col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="avatar-text avatar-xl rounded {{ $style['bg'] }}">
+                                                <i class="feather-briefcase"></i>
+                                            </div>
+                                            <a href="javascript:void(0);" class="fw-bold d-block {{ $style['text'] }}">
+                                                <span class="d-block">العدد في شركة {{ $companyStat['name'] }}</span>
+                                                <span class="fs-24 fw-bolder d-block" id="companyResignations{{ $companyStat['id'] }}">{{ $companyStat['count'] }}</span>
+                                            </a>
                                         </div>
-                                        <a href="javascript:void(0);" class="fw-bold d-block text-primary">
-                                            <span class="d-block">عدد في شركة بوسطه</span>
-                                            <span class="fs-24 fw-bolder d-block" id="boostaResignations">{{ $boostaResignations }}</span>
-                                        </a>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-xxl-4 col-md-6 mb-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="avatar-text avatar-xl rounded bg-info">
-                                            <i class="feather-user-plus"></i>
-                                        </div>
-                                        <a href="javascript:void(0);" class="fw-bold d-block text-info">
-                                            <span class="d-block">العدد في شركة نون</span>
-                                            <span class="fs-24 fw-bolder d-block" id="noonResignations">{{ $noonResignations }}</span>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    @endforeach
                 </div>
             </div>
         </div>
@@ -155,10 +152,20 @@
         <div class="card mb-4">
             <div class="card-body">
                 <form method="GET" action="{{ route('resignation-requests.index') }}" class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">البحث</label>
                         <input type="text" name="search" class="form-control" placeholder="ابحث عن الموظفين..." value="{{ request('search') }}">
                     </div>
+
+                     <div class="col-md-2">
+                        <label class="form-label">تاريخ الطلب من</label>
+                        <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">تاريخ الطلب إلى</label>
+                        <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                    </div>
+
                     <div class="col-md-2">
                         <label class="form-label">الحالة</label>
                         <select name="status" class="form-control">
@@ -189,14 +196,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label">تاريخ الطلب من</label>
-                        <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">تاريخ الطلب إلى</label>
-                        <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
-                    </div>
+
                     <div class="col-12 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2">تصفية</button>
                         <a href="{{ route('resignation-requests.index') }}" class="btn btn-light">مسح</a>
@@ -208,9 +208,6 @@
 
     <!-- [ Main Content ] start -->
     <div class="main-content">
-        <!-- Statistics Cards -->
-
-
         <div class="row">
             <div class="col-lg-12">
                 <div class="card">
@@ -238,14 +235,14 @@
                                     <thead>
                                         <tr>
                                             <th>الموظف</th>
-                                            <th>الشركه</th>
-                                            <!-- <th>القسم</th>
-                                            <th>تاريخ الاستقالة</th>
-                                            <th>آخر يوم عمل</th>
-                                            <th>فترة الإشعار</th> -->
+                                             <th>الشركه</th>
+                                            <!--<th>القسم</th>-->
+                                            <!--<th>تاريخ الاستقالة</th>-->
+                                            <!--<th>آخر يوم عمل</th>-->
+                                            <!--<th>فترة الإشعار</th>-->
                                             <th>السبب</th>
                                             <th>المصدر</th>
-                                            <th>المديونية</th>
+                                             <th>المديونية</th>
                                             <th>الحالة</th>
                                             <th>تاريخ الطلب</th>
                                             <th>الإجراءات</th>
@@ -268,11 +265,15 @@
                                                 </div>
                                             </td>
                                             <td>
-                                                <span class="badge bg-info">{{ $resignation->employee?->company?->name ?? $resignation->representative?->company?->name ?? $resignation->supervisor?->company?->name ?? 'غير محدد' }}</span></td>
-                                            <!-- <td>{{ $resignation->employee?->department?->name ?? 'غير محدد' }}</td>
-                                            <td>{{ $resignation->resignation_date ? $resignation->resignation_date->format('Y-m-d') : '-' }}</td>
-                                            <td>{{ $resignation->last_working_day ? $resignation->last_working_day->format('Y-m-d') : '-' }}</td>
-                                            <td>{{ $resignation->notice_period }} يوم</td -->>
+                                                <span class="badge bg-info">{{ $resignation->employee?->company?->name ??
+                                                $resignation->representative?->company?->name ?? $resignation->supervisor?->company?->name ?? 'غير محدد'
+                                                }}</span>
+                                            </td>
+
+                                            <!--<td>{{ $resignation->employee?->department?->name ?? 'غير محدد' }}</td>-->
+                                            <!--<td>{{ $resignation->resignation_date ? $resignation->resignation_date->format('Y-m-d') : '-' }}</td>-->
+                                            <!--<td>{{ $resignation->last_working_day ? $resignation->last_working_day->format('Y-m-d') : '-' }}</td>-->
+                                            <!--<td>{{ $resignation->notice_period }} يوم</td>-->
                                             <td>
                                                 <span class="text-truncate" style="max-width: 200px;" title="{{ $resignation->reason }}">
                                                     {{ Str::limit($resignation->reason, 60) }}
@@ -284,28 +285,28 @@
                                                 @elseif ($resignation->source === 'work_start')
                                                     <span class="badge bg-success">بدء العمل</span>
                                                 @else
-                                                    <span class="badge bg-warning">غير محدد</span>
+                                                    <span class="badge bg-warning"> APP</span>
                                                 @endif
                                             </td>
                                             <td>
-                                            @php
-
-                                                $hasUnpaidDebt =
+                                                @php
+                                                    $hasUnpaidDebt =
                                                         ($resignation->employee && $resignation->employee->debits->where('status', 'لم يسدد')->isNotEmpty()) ||
                                                         ($resignation->representative && $resignation->representative->debits->where('status', 'لم يسدد')->isNotEmpty()) ||
                                                         ($resignation->supervisor && $resignation->supervisor->debits->where('status', 'لم يسدد')->isNotEmpty());
 
-                                                $debit =
+
+                                                    $debit =
                                                     $resignation->employee?->debits->where('status', 'لم يسدد')->first()
                                                     ?? $resignation->representative?->debits->where('status', 'لم يسدد')->first()
                                                     ?? $resignation->supervisor?->debits->where('status', 'لم يسدد')->first();
-                                            @endphp
+                                                @endphp
 
-                                            @if($debit)
-                                                <span class="badge bg-warning">{{ $debit->loan_amount }}</span>
-                                            else
-                                                <span class="badge bg-success">لا توجد مديونية</span>
-                                            @endif
+                                                @if($debit)
+                                                <span class="badge bg-info">{{ $debit->loan_amount }}</span>
+                                                @else
+                                                    <span class="badge bg-success">لا توجد مديونية</span>
+                                                @endif
                                             </td>
                                             <td>
                                                 @if($resignation->status === 'pending')
@@ -313,31 +314,31 @@
                                                 @elseif($resignation->status === 'approved')
                                                     <span class="badge bg-success">تمت الموافقة</span>
                                                 @elseif($resignation->status === 'unresign')
-                                                    <span class="badge bg-danger">تم الرجوع للعمل</span>
+                                                    <span class="badge bg-success">تم الرجوع للعمل</span>
                                                 @else
                                                     <span class="badge bg-danger">مرفوض</span>
                                                 @endif
                                             </td>
                                             <td>{{ $resignation->created_at ? $resignation->created_at->format('Y-m-d') : '-' }}</td>
                                             <td>
-                                                @php
+
+                                                 @php
                                                     $person =
                                                         $resignation->representative
                                                         ?? $resignation->employee
                                                         ?? $resignation->supervisor;
                                                 @endphp
-
                                                 <div class="dropdown">
                                                     <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                                         <i class="feather-more-horizontal"></i>
                                                     </button>
                                                     <ul class="dropdown-menu">
                                                         @can('view_resignation_requests')
-                                                        <li>
-                                                            <a class="dropdown-item" href="{{ route('resignation-requests.show', $resignation->id) }}">
-                                                                <i class="feather-eye me-2"></i>عرض
-                                                            </a>
-                                                        </li>
+                                                        <li><a class="dropdown-item" href="{{ route('resignation-requests.show', $resignation->id) }}">
+                                                            <i class="feather-eye me-2"></i>عرض
+                                                        </a></li>
+
+
                                                         <li>
                                                             <button type="button"
                                                                     class="dropdown-item"
@@ -359,6 +360,13 @@
                                                         @if($resignation->status === 'pending')
                                                             @can('approve_resignation_requests')
                                                             <li>
+                                                                {{-- <form action="{{ route('resignation-requests.approve', $resignation->id) }}" method="POST" class="d-inline">
+                                                                    @csrf
+                                                                    <button type="submit" class="dropdown-item text-success" onclick="return confirm('هل أنت متأكد من الموافقة على الاستقالة؟ سيتم إلغاء تفعيل الموظف.')">
+                                                                        <i class="feather-check me-2"></i>موافقة
+                                                                    </button>
+                                                                </form>  --}}
+
                                                                 <button type="button"
                                                                         class="dropdown-item text-success"
                                                                         data-bs-toggle="modal"
@@ -394,7 +402,6 @@
                                                             @endcan
                                                         </li>
                                                         @endif
-
 
                                                         @can('delete_resignation_requests')
                                                         <li>
@@ -473,6 +480,7 @@
 </div>
 @endsection
 
+
 @section('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -492,11 +500,13 @@
         });
     });
 
-    function viewResignationDetails(button) {
+
+     function viewResignationDetails(button) {
         const resignationId = button.getAttribute('data-id');
         const name = button.getAttribute('data-name') || 'غير محدد';
         const phone = button.getAttribute('data-phone') || 'غير محدد';
         const status = button.getAttribute('data-status') || 'غير محدد';
+        const statusCode = button.getAttribute('data-status-code') || '';
         const reason = button.getAttribute('data-reason') || 'غير متوفر';
         const resignDate = button.getAttribute('data-resign-date') || '-';
         const lastDay = button.getAttribute('data-last-day') || '-';
@@ -540,8 +550,9 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">إضافة ملاحظة جديدة <span class="text-danger">*</span></label>
-                        <textarea id="newNoteText" class="form-control" rows="3" placeholder="أدخل ملاحظة جديدة....." required></textarea>
+                        <textarea id="newNoteText" class="form-control" rows="3" placeholder="أدخل ملاحظة جديدة....."></textarea>
                     </div>
+
                     <button type="button" class="btn btn-primary" onclick="saveNote(${resignationId})">
                         <i class="feather-save me-2"></i>حفظ الملاحظة
                     </button>
@@ -633,8 +644,18 @@
         .then(data => {
             if (data.success) {
                 document.getElementById('newNoteText').value = '';
-                // إعادة تحميل الصفحة بعد الحفظ مباشرة
-                window.location.reload();
+                // loadNotes(resignationId);
+                // btn.disabled = false;
+                // btn.innerHTML = originalText;
+
+                // // إذا تم تحديث الحالة، إعادة تحميل الصفحة
+                // if (data.note.status) {
+                //     setTimeout(() => {
+                //         window.location.reload();
+                //     }, 1000);
+                // }
+
+                 window.location.reload();
             } else {
                 alert(data.message || 'حدث خطأ أثناء حفظ الملاحظة');
                 btn.disabled = false;
@@ -649,7 +670,59 @@
         });
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
+    function updateStatus(resignationId, status, originalStatus) {
+        if (!status) {
+            return;
+        }
+
+        const statusText = status === 'approved' ? 'موافق' : 'غير موافق';
+        if (!confirm(`هل أنت متأكد من تغيير الحالة إلى "${statusText}"؟`)) {
+            // إعادة تعيين القيمة السابقة
+            const select = document.getElementById('statusSelect');
+            select.value = originalStatus || '';
+            return;
+        }
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+        const select = document.getElementById('statusSelect');
+        const originalValue = originalStatus || '';
+        select.disabled = true;
+
+        fetch(`{{ url('resignation-requests') }}/${resignationId}/update-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                status: status
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert('تم تحديث الحالة بنجاح');
+                // إعادة تحميل الصفحة لتحديث البيانات
+                window.location.reload();
+            } else {
+                alert(data.message || 'حدث خطأ أثناء تحديث الحالة');
+                select.value = originalValue;
+                select.disabled = false;
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('حدث خطأ أثناء تحديث الحالة');
+            select.value = originalValue;
+            select.disabled = false;
+        });
+    }
+
+
+
+
+document.addEventListener('DOMContentLoaded', function () {
 
     const modal = document.getElementById('StatusModal');
     const form  = document.getElementById('statusForm');
@@ -695,69 +768,12 @@
     }
 
 });
-
 </script>
 @endsection
 
-<!-- Modal -->
-<div class="modal fade" id="StatusModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-md"> <!-- توسيط المودال وتحديد الحجم -->
-                <div class="modal-content">
 
-                    <!-- Header -->
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title mb-0">تغيير حالة المندوب</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
 
-                    <!-- Body -->
-                    <form id="statusForm" method="POST">
-                        @csrf
-                        <input type="hidden" name="representative_id">
-                        <input type="hidden" name="type">
-                        <div class="modal-body">
-
-                            <div class="mb-3">
-                                <label for="status_governorate_id" class="form-label fw-bold">المحافظة</label>
-                                <select id="status_governorate_id" name="governorate_id" class="form-select">
-                                    <option value="">اختر المحافظة</option>
-                                    @foreach ($governorates as $gov)
-                                        <option value="{{ $gov->id }}">{{ $gov->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="status_location_id" class="form-label fw-bold">المنطقة</label>
-                                <select id="status_location_id" name="location_id" class="form-select">
-                                    <option value="">اختر المحافظة أولاً</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="status_company_id" class="form-label fw-bold">الشركة</label>
-                                <select id="status_company_id" name="company_id" class="form-select">
-                                    <option value="">اختر الشركة</option>
-                                    @foreach ($companies as $comp)
-                                        <option value="{{ $comp->id }}">{{ $comp->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                        </div>
-
-                        <!-- Footer -->
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                            <button type="submit" class="btn btn-primary">حفظ</button>
-                        </div>
-                    </form>
-
-                </div>
-            </div>
-        </div>
-
-<!-- Resignation Details Modal -->
+<!--notes-->
 <div class="modal fade" id="resignationDetailsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -774,6 +790,65 @@
         </div>
     </div>
 </div>
+
+
+<!-- Modal -->
+    <div class="modal fade" id="StatusModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-md"> <!-- توسيط المودال وتحديد الحجم -->
+            <div class="modal-content">
+
+                <!-- Header -->
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title mb-0">تغيير حالة المندوب</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+
+                <!-- Body -->
+                <form id="statusForm" method="POST">
+                    @csrf
+                    <input type="hidden" name="representative_id">
+                    <input type="hidden" name="type">
+                    <div class="modal-body">
+
+                        <div class="mb-3">
+                            <label for="status_governorate_id" class="form-label fw-bold">المحافظة</label>
+                            <select id="status_governorate_id" name="governorate_id" class="form-select">
+                                <option value="">اختر المحافظة</option>
+                                @foreach ($governorates as $gov)
+                                    <option value="{{ $gov->id }}">{{ $gov->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="status_location_id" class="form-label fw-bold">المنطقة</label>
+                            <select id="status_location_id" name="location_id" class="form-select">
+                                <option value="">اختر المحافظة أولاً</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="status_company_id" class="form-label fw-bold">الشركة</label>
+                            <select id="status_company_id" name="company_id" class="form-select">
+                                <option value="">اختر الشركة</option>
+                                @foreach ($companies as $comp)
+                                    <option value="{{ $comp->id }}">{{ $comp->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-primary">حفظ</button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
 
 <!-- Approval Modal -->
 <div class="modal fade" id="approveModal" tabindex="-1" aria-labelledby="approveModalLabel" aria-hidden="true">

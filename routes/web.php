@@ -474,14 +474,14 @@ Route::get('advance-requests/{id}/receipt', [AdvanceRequestController::class, 's
 
         Route::get('resignation-requests/reports', [ResignationRequestController::class, 'report'])
         ->name('resignation-requests.reports');
+        Route::get('resignation-requests/export', [ResignationRequestController::class, 'export'])
+            ->name('resignation-requests.export');
 
         Route::resource('resignation-requests', ResignationRequestController::class);
         Route::post('resignation-requests/{id}/approve', [ResignationRequestController::class, 'approve'])
             ->name('resignation-requests.approve');
         Route::post('resignation-requests/{id}/reject', [ResignationRequestController::class, 'reject'])
             ->name('resignation-requests.reject');
-        Route::get('resignation-requests/export', [ResignationRequestController::class, 'export'])
-            ->name('resignation-requests.export');
         Route::post('resignation-requests/{id}/toggle-status', [ResignationRequestController::class, 'toggleStatus'])
         ->name('resignation-requests.toggle-status');
         Route::get('resignation-requests/{id}/notes', [ResignationRequestController::class, 'getNotes'])

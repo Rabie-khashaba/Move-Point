@@ -2,19 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ResignationRequestsExport;
 use App\Models\ResignationRequest;
 use App\Models\ResignationRequestNote;
 use App\Models\Employee;
-use App\Models\Representative;
 use App\Models\Debt;
+use App\Models\Representative;
 use App\Models\Supervisor;
+use App\Models\Company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use App\Services\FirebaseNotificationService;
 use App\Services\NotificationService;
 use App\Services\WhatsAppWorkService;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 
@@ -78,7 +80,7 @@ class ResignationRequestController extends Controller
             ->latest()
             ->paginate(20);
 
-        // إنشاء query base للإحصائيات (نفس الفلاتر)
+         // إنشاء query base للإحصائيات (نفس الفلاتر)
         $statsQuery = ResignationRequest::query()
             ->when(request('search'), function($query, $search) {
                 $query->whereHas('employee', function($q) use ($search) {
@@ -128,58 +130,37 @@ class ResignationRequestController extends Controller
         $rejectedResignations = (clone $statsQuery)->where('status', 'rejected')->count();
         $unresignResignations = (clone $statsQuery)->where('status', 'unresign')->count(); */
 
-        // إحصائيات حسب الشركة
-        $boostaResignations = (clone $statsQuery)->where(function($q) {
-            $q->whereHas('employee', function($emp) {
-                $emp->where('company_id', 10);
-            })
-            ->orWhereHas('representative', function($rep) {
-                $rep->where('company_id', 10);
-            })
-            ->orWhereHas('supervisor', function($sup) {
-                $sup->where('company_id', 10);
-            });
-        })->count();
-
-        $noonResignations = (clone $statsQuery)->where(function($q) {
-            $q->whereHas('employee', function($emp) {
-                $emp->where('company_id', 9);
-            })
-            ->orWhereHas('representative', function($rep) {
-                $rep->where('company_id', 9);
-            })
-            ->orWhereHas('supervisor', function($sup) {
-                $sup->where('company_id', 9);
-            });
-        })->count();
-
         $departments = \App\Models\Department::all();
         $governorates = \App\Models\Governorate::all();
-        $companies = \App\Models\Company::where('is_active', true)->get();
+        $companies = Company::where('is_active', true)->get();
+        $companyResignationStats = $companies->map(function ($company) use ($statsQuery) {
+            $count = (clone $statsQuery)->where(function ($q) use ($company) {
+                $q->whereHas('employee', function ($emp) use ($company) {
+                    $emp->where('company_id', $company->id);
+                })
+                ->orWhereHas('representative', function ($rep) use ($company) {
+                    $rep->where('company_id', $company->id);
+                })
+                ->orWhereHas('supervisor', function ($sup) use ($company) {
+                    $sup->where('company_id', $company->id);
+                });
+            })->count();
+
+            return [
+                'id' => $company->id,
+                'name' => $company->name,
+                'count' => $count,
+            ];
+        });
 
         return view('resignation-requests.index', compact(
             'resignations',
             'departments',
             'governorates',
             'companies',
-            'totalResignations',
-            /* 'pendingResignations',
-            'approvedResignations',
-            'rejectedResignations',
-            'unresignResignations', */
-            'boostaResignations',
-            'noonResignations'
+            'companyResignationStats',
+            'totalResignations'
         ));
-    }
-
-    /**
-     * Store is required by the resource route but we don't allow creating
-     * resignation requests from the panel (فقط من التطبيق).
-     */
-    public function store(Request $request)
-    {
-        return redirect()->route('resignation-requests.index')
-            ->with('error', 'لا يمكن إنشاء طلب استقالة من لوحة التحكم. يتم تقديم الطلب من تطبيق المندوب أو الموظف فقط.');
     }
 
     public function show($id)
@@ -189,6 +170,49 @@ class ResignationRequestController extends Controller
         $resignation = ResignationRequest::with(['employee.department', 'representative', 'supervisor', 'approver'])->findOrFail($id);
         return view('resignation-requests.show', compact('resignation'));
     }
+
+    // public function approve($id)
+    // {
+    //     $this->authorize('approve_resignation_requests');
+
+    //     $resignation = ResignationRequest::findOrFail($id);
+
+    //     if ($resignation->status !== 'pending') {
+    //         return back()->with('error', 'لا يمكن الموافقة على طلب تمت معالجته مسبقاً');
+    //     }
+
+    //     $resignation->update([
+    //         'status' => 'approved',
+    //         'approved_by' => Auth::id(),
+    //         'approved_at' => now()
+    //     ]);
+
+    //     // Deactivate the employee
+    //     $resignation->employee?->update(['is_active' => false]);
+
+    //     // Send notification to the user
+    //     $user = $resignation->employee?->user ?? $resignation->representative?->user ?? $resignation->supervisor?->user;
+    //     if ($user) {
+    //         $this->firebaseService->sendResignationRequestApprovalNotification($user, [
+    //             'id' => $resignation->id,
+    //             'resignation_date' => $resignation->resignation_date,
+    //         ]);
+    //     }
+
+    //     // Note: Removed notifications to all admins/supervisors - only notify the requester
+
+    //     // Create notification for admins and supervisors
+    //     try {
+    //         $this->notificationService->notifyResignationRequest($resignation, 'approved');
+    //     } catch (\Exception $e) {
+    //         \Log::error('Failed to create resignation request approval notification: ' . $e->getMessage());
+    //     }
+
+    //     return redirect()->route('resignation-requests.index')
+    //         ->with('success', 'تم الموافقة على طلب الاستقالة بنجاح!');
+    // }
+
+
 
     public function approve(Request $request, $id)
     {
@@ -341,7 +365,7 @@ class ResignationRequestController extends Controller
         try {
             $this->notificationService->notifyResignationRequest($resignation, 'rejected');
         } catch (\Exception $e) {
-            Log::error('Failed to create resignation request rejection notification: ' . $e->getMessage());
+            \Log::error('Failed to create resignation request rejection notification: ' . $e->getMessage());
         }
 
         return redirect()->route('resignation-requests.index')
@@ -363,63 +387,16 @@ class ResignationRequestController extends Controller
     {
         $this->authorize('view_resignation_requests');
 
-        $resignations = ResignationRequest::with(['employee.department', 'representative', 'supervisor', 'approver'])
-            ->when(request('status'), function($query, $status) {
-                $query->where('status', $status);
-            })
-            ->get();
+        $filename = "resignation_requests_" . now()->format('Y-m-d') . ".xlsx";
 
-        $filename = "resignation_requests_" . now()->format('Y-m-d') . ".csv";
-
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename={$filename}",
-        ];
-
-        $callback = function() use ($resignations) {
-            $file = fopen('php://output', 'w');
-
-            // Add BOM for Arabic text
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            fputcsv($file, [
-                'الاسم', 'القسم', 'تاريخ الاستقالة', 'آخر يوم عمل', 'السبب',
-                'الحالة', 'تمت الموافقة بواسطة', 'تاريخ الموافقة'
-            ]);
-
-            foreach ($resignations as $resignation) {
-                $name = $resignation->employee?->name
-                    ?? $resignation->representative?->name
-                    ?? $resignation->supervisor?->name
-                    ?? 'غير محدد';
-                $department = $resignation->employee?->department?->name ?? 'غير محدد';
-                $resignationDate = $resignation->resignation_date ? $resignation->resignation_date->format('Y-m-d') : '-';
-                $lastDay = $resignation->last_working_day ? $resignation->last_working_day->format('Y-m-d') : '-';
-                $approvedAt = $resignation->approved_at ? $resignation->approved_at->format('Y-m-d') : 'لم تتم المعالجة';
-
-                fputcsv($file, [
-                    $name,
-                    $department,
-                    $resignationDate,
-                    $lastDay,
-                    $resignation->reason,
-                    $resignation->status_text ?? $resignation->status,
-                    $resignation->approver->name ?? 'غير محدد',
-                    $approvedAt
-                ]);
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return Excel::download(new ResignationRequestsExport($request), $filename);
     }
 
 
 
     public function toggleStatus(Request $request, $id)
     {
-        //
+        //return $request->all();
         $this->authorize('edit_representatives_no');
 
         DB::beginTransaction();
@@ -470,6 +447,7 @@ class ResignationRequestController extends Controller
                     'is_active' => $model->is_active
                 ]);
             }
+
 
             // إذا تم تفعيل الشخص، ابحث عن طلب الاستقالة المرتبط به وغير حالته إلى "unresign"
             if ($model->is_active) {
@@ -523,7 +501,9 @@ class ResignationRequestController extends Controller
         }
     }
 
-    public function getNotes($id)
+
+
+     public function getNotes($id)
     {
         $this->authorize('view_resignation_requests');
 
@@ -552,7 +532,7 @@ class ResignationRequestController extends Controller
 
         $validated = $request->validate([
             'note' => 'required|string|max:5000',
-            'status' => 'nullable|in:approved,rejected',
+            //'status' => 'nullable|in:approved,rejected',
         ]);
 
         $resignation = ResignationRequest::findOrFail($id);
@@ -566,35 +546,35 @@ class ResignationRequestController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
-            /* // إذا تم تحديد حالة، قم بتحديث حالة طلب الاستقالة
-            if ($validated['status']) {
-                // لا يمكن تغيير الحالة إذا كانت "unresign"
-                if ($resignation->status !== 'unresign') {
-                    $resignation->update([
-                        'status' => $validated['status'],
-                        'approved_by' => Auth::id(),
-                        'approved_at' => now()
-                    ]);
+            // إذا تم تحديد حالة، قم بتحديث حالة طلب الاستقالة
+            // if ($validated['status']) {
+            //     // لا يمكن تغيير الحالة إذا كانت "unresign"
+            //     if ($resignation->status !== 'unresign') {
+            //         $resignation->update([
+            //             'status' => $validated['status'],
+            //             'approved_by' => Auth::id(),
+            //             'approved_at' => now()
+            //         ]);
 
-                    // إذا تمت الموافقة، قم بتعطيل الموظف/المندوب/المشرف
-                    if ($validated['status'] === 'approved') {
-                        $resignation->employee?->update(['is_active' => false]);
-                        $resignation->representative?->update([
-                            'is_active' => false,
-                            'resign_date' => now(),
-                            'unresign_date' => null,
-                            'unresign_by' => null,
-                        ]);
-                        $resignation->supervisor?->update(['is_active' => false]);
+            //         // إذا تمت الموافقة، قم بتعطيل الموظف/المندوب/المشرف
+            //         if ($validated['status'] === 'approved') {
+            //             $resignation->employee?->update(['is_active' => false]);
+            //             $resignation->representative?->update([
+            //                 'is_active' => false,
+            //                 'resign_date' => now(),
+            //                 'unresign_date' => null,
+            //                 'unresign_by' => null,
+            //             ]);
+            //             $resignation->supervisor?->update(['is_active' => false]);
 
-                        // Sync user status if exists
-                        $user = $resignation->employee?->user ?? $resignation->representative?->user ?? $resignation->supervisor?->user;
-                        if ($user) {
-                            $user->update(['is_active' => false]);
-                        }
-                    }
-                }
-            } */
+            //             // Sync user status if exists
+            //             $user = $resignation->employee?->user ?? $resignation->representative?->user ?? $resignation->supervisor?->user;
+            //             if ($user) {
+            //                 $user->update(['is_active' => false]);
+            //             }
+            //         }
+            //     }
+            // }
 
             DB::commit();
 
@@ -606,8 +586,8 @@ class ResignationRequestController extends Controller
                 'note' => [
                     'id' => $note->id,
                     'note' => $note->note,
-                    'status' => $note->status,
-                    'status_text' => $note->status === 'approved' ? 'موافق' : ($note->status === 'rejected' ? 'غير موافق' : null),
+                    //'status' => $note->status,
+                    //'status_text' => $note->status === 'approved' ? 'موافق' : ($note->status === 'rejected' ? 'غير موافق' : null),
                     'created_by' => $note->createdBy?->name ?? 'غير محدد',
                     'created_at' => $note->created_at->format('Y-m-d H:i'),
                     'created_at_formatted' => $note->created_at->diffForHumans(),
@@ -622,53 +602,8 @@ class ResignationRequestController extends Controller
         }
     }
 
-    /* public function updateStatus(Request $request, $id)
-    {
-        $this->authorize('approve_resignation_requests');
 
-        $validated = $request->validate([
-            'status' => 'required|in:approved,rejected',
-        ]);
 
-        $resignation = ResignationRequest::findOrFail($id);
-
-        // لا يمكن تغيير الحالة إذا كانت "unresign"
-        if ($resignation->status === 'unresign') {
-            return response()->json([
-                'success' => false,
-                'message' => 'لا يمكن تغيير حالة طلب تم الرجوع فيه للعمل'
-            ], 400);
-        }
-
-        $resignation->update([
-            'status' => $validated['status'],
-            'approved_by' => Auth::id(),
-            'approved_at' => now()
-        ]);
-
-        // إذا تمت الموافقة، قم بتعطيل الموظف/المندوب/المشرف
-        if ($validated['status'] === 'approved') {
-            $resignation->employee?->update(['is_active' => false]);
-            $resignation->representative?->update([
-                'is_active' => false,
-                'resign_date' => now(),
-                'unresign_date' => null,
-                'unresign_by' => null,
-            ]);
-            $resignation->supervisor?->update(['is_active' => false]);
-
-            // Sync user status if exists
-            $user = $resignation->employee?->user ?? $resignation->representative?->user ?? $resignation->supervisor?->user;
-            if ($user) {
-                $user->update(['is_active' => false]);
-            }
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'تم تحديث الحالة بنجاح'
-        ]);
-    } */
 
     public function report()
     {
@@ -694,6 +629,5 @@ class ResignationRequestController extends Controller
 
         return view('resignation-requests.report', compact('activeByStats'));
     }
-
 
 }

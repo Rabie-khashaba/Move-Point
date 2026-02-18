@@ -67,6 +67,8 @@ class LeadImport implements ToCollection, WithHeadingRow, WithCalculatedFormulas
                 continue;
             }
 
+
+
             $validator = Validator::make($data, [
                 'name' => 'required|string|max:255',
                 'phone' => 'required|digits:11|unique:leads,phone',

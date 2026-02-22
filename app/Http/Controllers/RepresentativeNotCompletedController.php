@@ -41,12 +41,16 @@ class RepresentativeNotCompletedController extends Controller
     public function index(Request $request)
     {
         $this->authorize('view_representatives_no');
+        $authUser = auth()->user();
 
 
 
         // Base Query (بدون علاقات – فقط الفلاتر الأساسية)
             $baseQuery = Representative::where('status', 0)
                 //->where('is_active', 1)
+                ->when($authUser && $authUser->type === 'employee', fn($q) =>
+                    $q->where('employee_id', $authUser->id)
+                )
                 ->when($request->filled('date_from'), fn($q) =>
                     $q->whereDate('start_date', '>=', $request->date_from)
                 )

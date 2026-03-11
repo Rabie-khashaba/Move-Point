@@ -21,11 +21,18 @@ class MobileAuthController extends Controller
             'device_token' => 'nullable|string',
         ]);
 
+        $phone = trim((string) $request->phone);
+
         // Find user by phone number
-        $user = User::where('phone', $request->phone)->first();
+        $user = User::where('phone', $phone)->first();
 
         // Check if user exists and password is correct
         if (!$user || !Hash::check($request->password, $user->password)) {
+            Log::warning('Mobile login failed', [
+                'phone' => $phone,
+                'user_found' => (bool) $user,
+                'user_type' => $user?->type,
+            ]);
             return response()->json([
                 'message' => 'بيانات الدخول غير صحيحة',
                 'status' => 'error'

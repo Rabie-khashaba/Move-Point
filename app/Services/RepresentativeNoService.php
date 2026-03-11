@@ -1,14 +1,13 @@
 <?php
 namespace App\Services;
-
-use App\Models\Lead;
-use App\Models\Supervisor;
 use App\Repositories\RepresentativeRepository;
 use App\Models\User;
+use App\Models\Lead;
 use App\Services\PasswordService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class RepresentativeNoService
 {
@@ -38,8 +37,6 @@ class RepresentativeNoService
 
     public function create(array $data)
     {
-
-
         Log::info('RepresentativeNoService@create started', [
             'name' => $data['name'] ?? 'N/A',
             'phone' => $data['phone'] ?? 'N/A',
@@ -48,7 +45,12 @@ class RepresentativeNoService
             'created_by' => auth()->id() ?? 'public_registration'
         ]);
 
+
+
+         DB::beginTransaction();
+
         try {
+
             // Generate password automatically
             $generatedPassword = $this->passwordService->generatePassword($data['name'], $data['phone']);
 
@@ -57,30 +59,27 @@ class RepresentativeNoService
                 'password_length' => strlen($generatedPassword)
             ]);
 
-            $type = ['representative']; // النوع الأساسي
-
-            if (!empty($data['is_supervisor']) && $data['is_supervisor']) {
-                $type[] = 'supervisor';
-            }
-
-            // نحول المصفوفة لسلسلة
-            $userType = implode(',', $type);
-
-            $user = User::create([
-                'phone' => $data['phone'],
-                'password' => Hash::make($generatedPassword),
-                'type' => 'supervisor', // ← هنا ندعم مندوب + مشرف
-
-            ]);
-
-
             // Create user account for mobile app
-            /* $user = User::create([
+
+
+             if (!empty($data['is_supervisor']) && $data['is_supervisor']) {
+                 $user = User::create([
                 'phone' => $data['phone'],
                 'password' => Hash::make($generatedPassword),
-                'type' => 'representative',
+                'type' => 'supervisor',  // representative
                 'forget_password' => false,
-            ]); */
+            ]);
+             }else{
+
+                     $user = User::create([
+                    'phone' => $data['phone'],
+                    'password' => Hash::make($generatedPassword),
+                    'type' => 'representative',
+                    'forget_password' => false,
+                ]);
+
+             }
+
 
 
             Log::info('User account created successfully', [
@@ -90,18 +89,19 @@ class RepresentativeNoService
             ]);
 
             // Handle file uploads for 5 attachments
-            $requiredDocs = [
+             $requiredDocs = [
                 0 => 'البطاقة (وجه أول)',
                 1 => 'البطاقة (خلف)',
                 2 => 'فيش',
                 3 => 'شهادة ميلاد',
                 4 => 'إيصال الأمانة',
                 5 => 'رخصة القيادة',
-                6 => 'رخصة السيارة وجه أول',
-                7 => 'رخصة السيارة وجه ثاني',
+                6 =>  'رخصة السيارة وجه أول',
+                7 =>  'رخصة السيارة وجه ثاني',
                 8 => 'إيصال مرافق (غاز أو مياه أو كهرباء)',
-
+                9 =>  'مرفق بيانات الاستعلام',
             ];
+
 
             $attachments = [];
             if (isset($data['attachments']) && is_array($data['attachments'])) {
@@ -114,7 +114,7 @@ class RepresentativeNoService
                     if ($file && $file->isValid()) {
                         // Check MIME type to avoid .htm uploads
                         $mime = $file->getMimeType(); // ex: image/jpeg, application/pdf
-                        $ext = strtolower($file->getClientOriginalExtension());
+                        $ext  = strtolower($file->getClientOriginalExtension());
 
                         $allowedExt = ['jpg', 'jpeg', 'png', 'pdf'];
                         $allowedMime = ['image/jpeg', 'image/png', 'application/pdf'];
@@ -147,13 +147,14 @@ class RepresentativeNoService
                         ]);
                     }
                 }
-
             }
+
 
             Log::info('Attachments processing completed', [
                 'successful_uploads' => count($attachments),
                 'total_attachments' => count($data['attachments'] ?? [])
             ]);
+
 
             $storeInquiryAttachments = function (array $files, string $dir, string $typeLabel): array {
                 $stored = [];
@@ -192,25 +193,25 @@ class RepresentativeNoService
                 'استعلام أمني'
             );
 
-            $lead = Lead::where('phone', $data['phone'])->first();
-            // 💡 لو وجدنا lead نأخذ منه assigned_to
-            $employeeId = $lead ? $lead->assigned_to : null;
+             $lead = Lead::where('phone', $data['phone'])->first();
 
+            // 💡 لو وجدنا lead نأخذ منه assigned_id
+            $employeeId = $lead ? $lead->assigned_to : null;
 
             $representativeData = [
                 'user_id' => $user->id,
-                'name' => $data['name'],
-                'phone' => $data['phone'],
-                'address' => $data['address'],
-                'address_in_card' => $data['address_in_card'],
-                'contact' => $data['contact'],
+                'name' => $data['name'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'address' => $data['address'] ?? null,
+                'address_in_card' => $data['address_in_card'] ?? null,
+                'contact' => $data['contact'] ?? null,
                 'national_id' => $data['national_id'],
-                'salary' => $data['salary'],
-                'start_date' => $data['start_date'],
-                'company_id' => $data['company_id'],
-                'bank_account' => $data['bank_account'],
-                'code' => $data['code'],
-                'attachments' => $attachments,
+                'salary' => $data['salary'] ?? null,
+                'start_date' => $data['start_date'] ?? null,
+                'company_id' => $data['company_id'] ?? null,
+                'bank_account' => $data['bank_account'] ?? null,
+                'code' => $data['code'] ?? null,
+                'attachments' => $attachments ,
                 'inquiry_checkbox' => $data['inquiry_checkbox'] ?? false,
                 'governorate_id' => $data['governorate_id'],
                 'location_id' => $data['location_id'],
@@ -218,8 +219,7 @@ class RepresentativeNoService
                 'inquiry_data' => $data['inquiry_data'] ?? null,
                 'is_active' => $data['is_active'] ?? true,
                 'created_by' => auth()->id(), // Set the current user as creator
-
-                'employee_id' => $employeeId,
+                'employee_id' => $data['employee_id'] ?? $employeeId ,
 
             ];
 
@@ -228,7 +228,10 @@ class RepresentativeNoService
                 'representative_data_keys' => array_keys($representativeData)
             ]);
 
+
+
             $representative = $this->repository->create($representativeData);
+
 
             $representative->inquiry()->updateOrCreate(
                 ['representative_id' => $representative->id],
@@ -312,25 +315,48 @@ class RepresentativeNoService
 
             // Send WhatsApp notification with credentials
             try {
-                $message = "مرحباً {$data['name']}،\n\n" .
-                    "تم إنشاء حسابك بنجاح في النظام.\n\n" .
-                    "بيانات تسجيل الدخول:\n" .
-                    "رقم الهاتف: {$data['phone']}\n" .
-                    "كلمة المرور: {$generatedPassword}\n\n" .
-                    "تحميل التطبيق:\n" .
-                    "https://play.google.com/store/apps/details?id=com.tripple.move_point\n\n" .
-                    "فيديو لمعرفة كيفية طلب سلفتك:\n" .
-                    "https://movepoint.site/storage/app/public/videos/representative-welcome.mp4\n\n" .
-                    "للتواصل فون الأرقام التالية وأي رقم آخر لا يعتد به:\n" .
-                    "منه / 01111266019\n" .
-                    "يوسف / 01026768707\n" .
-                    "مؤمن / 01044446905\n\n" .
+                $message =
+"مرحباً {$data['name']}،\n\n" .
 
-                    "اطلب سلفتك الآن من التطبيق";
+"تم إنشاء حسابك بنجاح في النظام. ✅\n\n" .
 
-                $whatsappService = app(\App\Services\WhatsAppService::class);
-                //$whatsappService = app(\App\Services\WhatsAppService2::class);
-                $whatsappService->send($data['phone'], $message);
+"📌 بيانات تسجيل الدخول:\n" .
+"رقم الهاتف: {$data['phone']}\n" .
+"كلمة المرور: {$generatedPassword}\n\n" .
+
+"📱 تحميل التطبيق:\n" .
+"https://play.google.com/store/apps/details?id=com.tripple.move_point\n\n" .
+
+"🎥 فيديو شرح طلب السلفة:\n" .
+"https://movepoint.site/storage/app/public/videos/representative-welcome.mp4\n\n" .
+
+"📞 للتواصل (الأرقام المعتمدة فقط، وأي رقم آخر لا يُعتد به):\n" .
+"منه / 01111266019\n" .
+"محمد / 01026768707\n" .
+"سميحه / 01100788083\n" .
+"محمود / 01100788085\n" .
+"سها / 01111877377\n\n" .
+
+"🚀 اطلب سلفتك الآن من خلال التطبيق.\n" .
+"نتمنى لك التوفيق 🌟";
+
+                // $whatsappService = app(\App\Services\WhatsAppService::class);
+                // $whatsappService->send($data['phone'], $message);
+
+
+
+            $employee = auth()->user()?->employee;
+            $deviceToken = $employee?->device?->device_token;
+
+            $whatsapp = app(\App\Services\WhatsAppServicebyair::class);
+            $result = $whatsapp->send(
+                $data['phone'],
+                $message ,
+                null,
+                null,
+                $deviceToken
+            );
+
             } catch (\Exception $e) {
                 Log::error('Failed to send WhatsApp notification for representative: ' . $e->getMessage());
             }
@@ -343,8 +369,12 @@ class RepresentativeNoService
                 'attachments_count' => count($attachments)
             ]);
 
+              DB::commit();
+
             return $representative;
         } catch (\Exception $e) {
+             // ❌ لو أي حاجة وقعت → رجّع كل اللي اتعمل
+            DB::rollBack();
             Log::error('RepresentativeNoService@create failed: ' . $e->getMessage(), [
                 'phone' => $data['phone'] ?? 'N/A',
                 'name' => $data['name'] ?? 'N/A',
@@ -373,7 +403,7 @@ class RepresentativeNoService
                 : $representative->attachments;
         }
 
-        $inquiry = $representative->inquiry;
+         $inquiry = $representative->inquiry;
 
         $existingInquiryFieldAttachments = [];
         if ($inquiry && $inquiry->inquiry_field_attachments) {
@@ -422,57 +452,41 @@ class RepresentativeNoService
             return $stored;
         };
 
-
-        // Generate password automatically
-        $generatedPassword = $this->passwordService->generatePassword($data['name'], $data['phone']);
-
         // Update user info
         $user = User::find($representative->user_id);
 
-
-        if ($user) {
-
-            // لو تم اختيار checkbox supervisor → حط النوعين
-            if (!empty($data['is_supervisor']) && $data['is_supervisor']) {
-                $type = ['supervisor'];
-            } else {
-                // في حالة إلغاء checkbox → ارجع يمثل مندوب فقط
-                $type = ['representative'];
-            }
-
-            $user->update([
-                'name'  => $data['name'] ?? $user->name,
-                'phone' => $data['phone'] ?? $user->phone,
-                'type'  => implode(',', $type),
-                'password' => Hash::make($generatedPassword),
-            ]);
-        }
+        // نفس منطق الاختيار بالظبط
+        $type = !empty($data['is_supervisor']) && $data['is_supervisor']
+                ? 'supervisor'
+                : 'representative';
 
         if ($user) {
             $user->update([
                 'name' => $data['name'] ?? $user->name,
                 'phone' => $data['phone'] ?? $user->phone,
+                'type' => $type,
             ]);
             Log::info('User info updated for representative', [
                 'user_id' => $user->id,
                 'name' => $user->name,
                 'phone' => $user->phone,
+                'type' => $type,
             ]);
-
         }
 
         // Define required document types
-        $requiredDocs = [
-            0 => 'البطاقة (وجه أول)',
-            1 => 'البطاقة (خلف)',
-            2 => 'فيش',
-            3 => 'شهادة ميلاد',
-            4 => 'إيصال الأمانة',
-            5 => 'رخصة القيادة',
-            6 => 'رخصة السيارة وجه أول',
-            7 => 'رخصة السيارة وجه ثاني',
-            8 => 'إيصال مرافق (غاز أو مياه أو كهرباء)',
-        ];
+         $requiredDocs = [
+                0 => 'البطاقة (وجه أول)',
+                1 => 'البطاقة (خلف)',
+                2 => 'فيش',
+                3 => 'شهادة ميلاد',
+                4 => 'إيصال الأمانة',
+                5 => 'رخصة القيادة',
+                6 =>  'رخصة السيارة وجه أول',
+                7 =>  'رخصة السيارة وجه ثاني',
+                8 => 'إيصال مرافق (غاز أو مياه أو كهرباء)',
+                9 =>  'مرفق بيانات الاستعلام',
+            ];
 
         // Handle new file uploads
         if (isset($data['attachments']) && is_array($data['attachments'])) {
@@ -485,10 +499,8 @@ class RepresentativeNoService
                 if ($file && $file->isValid()) {
 
                     // Delete old file at this index if exists
-                    if (
-                        isset($existingAttachments[$index]['path'])
-                        && Storage::disk('public')->exists($existingAttachments[$index]['path'])
-                    ) {
+                    if (isset($existingAttachments[$index]['path'])
+                        && Storage::disk('public')->exists($existingAttachments[$index]['path'])) {
                         Storage::disk('public')->delete($existingAttachments[$index]['path']);
                         Log::info('Old attachment deleted', [
                             'representative_id' => $representative->id,
@@ -547,6 +559,8 @@ class RepresentativeNoService
 
         $data['attachments'] = $existingAttachments;
 
+
+
         $newInquiryFieldAttachments = $storeInquiryAttachments(
             $data['inquiry_field_attachments'] ?? [],
             'representatives/inquiry-field',
@@ -584,6 +598,8 @@ class RepresentativeNoService
             ]
         );
 
+        // Update representative record
+        $updatedRepresentative = $this->repository->update($representative, $data);
 
         if (!empty($data['is_supervisor']) && $data['is_supervisor']) {
 
@@ -602,18 +618,16 @@ class RepresentativeNoService
                     'is_active'      => $data['is_active'] ?? 1,
                     'code'           => $data['code'],
                     'company_id'     => $data['company_id'],
-
-
                 ]
             );
+
 
 
             try {
                 $message = "مرحباً {$data['name']}،\n\n" .
                     "تم تعديل حسابك بنجاح في النظام.\n\n" .
                     "بيانات تسجيل الدخول:\n" .
-                    "رقم الهاتف: {$data['phone']}\n" .
-                    "كلمة المرور: {$generatedPassword}\n\n" .
+                    "رقم الهاتف: {$data['phone']}\n\n" .
                     "تحميل التطبيق:\n" .
                     "https://play.google.com/store/apps/details?id=com.tripple.move_point\n\n" .
                     "فيديو لمعرفة كيفية طلب سلفتك:\n" .
@@ -622,13 +636,27 @@ class RepresentativeNoService
                     "منه / 01111266019\n" .
                     "يوسف / 01026768707\n" .
                     "مؤمن / 01044446905\n\n" .
-                    "يرجى تسجيل الدخول وتغيير كلمة المرور.\n\n" .
-                    "شكراً لكم\n\n" .
+                    // "يرجى تسجيل الدخول وتغيير كلمة المرور.\n\n" .
+                    // "شكراً لكم\n\n" .
                     "اطلب سلفتك الآن من التطبيق";
 
-                $whatsappService = app(\App\Services\WhatsAppService::class);
-                //$whatsappService = app(\App\Services\WhatsAppService2::class);
-                $whatsappService->send($data['phone'], $message);
+                // $whatsappService = app(\App\Services\WhatsAppService::class);
+                // //$whatsappService = app(\App\Services\WhatsAppService2::class);
+                // $whatsappService->send($data['phone'], $message);
+
+
+            // $employee = auth()->user()?->employee;
+            // $deviceToken = $employee?->device?->device_token;
+
+            // $whatsapp = app(\App\Services\WhatsAppServicebyair::class);
+            // $result = $whatsapp->send(
+            //     $data['phone'],
+            //     $message ,
+            //     null,
+            //     null,
+            //     $deviceToken
+            // );
+
             } catch (\Exception $e) {
                 Log::error('Failed to send WhatsApp notification for representative: ' . $e->getMessage());
             }

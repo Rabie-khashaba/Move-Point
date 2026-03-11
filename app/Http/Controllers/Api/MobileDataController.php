@@ -356,7 +356,7 @@ class MobileDataController extends Controller
     {
         $governments = Governorate::with(['locations' => function($query) {
             $query->select('id', 'name', 'address', 'governorate_id')
-                ->orderBy('name');
+                  ->orderBy('name');
         }])
         ->select('id', 'name')
         ->orderBy('name')
@@ -454,7 +454,8 @@ class MobileDataController extends Controller
         return response()->json(['data' => $locations]);
     }
 
-    /**
+
+     /**
      * Get all banks (for bank account creation)
      */
     public function getBanks(Request $request)
@@ -581,7 +582,6 @@ class MobileDataController extends Controller
             'bonuses' => [],
             'total' => 5632
         ];
-
 
         // Add specific data based on month
         switch ($month) {

@@ -782,6 +782,109 @@ class MobileRequestController extends Controller
     /**
      * Create bank account for representative
      */
+    // public function createBankAccount(Request $request)
+    // {
+    //     try {
+    //         $user = $request->user();
+
+    //         // Check if user is representative
+    //         /* if ($user->type !== 'representative' || !$user->representative) {
+    //             return response()->json([
+    //                 'message' => 'يسمح فقط للمندوبين بإنشاء حساب بنكي',
+    //                 'status' => 'error'
+    //             ], 403);
+    //         } */
+
+    //         $representative = $user->representative;
+
+    //         // التحقق من وجود حساب بنكي للمندوب
+    //         $existingBankAccount = \App\Models\BankAccount::where('representative_id', $representative->id)
+    //             ->with('bank')
+    //             ->first();
+
+    //         if ($existingBankAccount) {
+    //             return response()->json([
+    //                 'message' => 'لديك حساب بنكي مسجل بالفعل',
+    //                 'status' => 'error',
+    //                 'data' => [
+    //                     'id' => $existingBankAccount->id,
+    //                     'bank_id' => $existingBankAccount->bank_id,
+    //                     'bank_name' => $existingBankAccount->bank->name ?? null,
+    //                     'status' => $existingBankAccount->status,
+    //                     'account_owner_name' => $existingBankAccount->account_owner_name,
+    //                     'account_number' => $existingBankAccount->account_number,
+    //                 ]
+    //             ], 409); // 409 Conflict status code
+    //         }
+
+    //         // إذا كانت الحالة "لا يمتلك حساب"، نقبل البيانات بدون الحقول الأخرى
+    //         if ($request->status === 'لا يمتلك حساب') {
+    //             $request->validate([
+    //                 'status' => 'required|in:لا يمتلك حساب',
+    //             ]);
+
+    //             $bankAccount = \App\Models\BankAccount::create([
+    //                 'representative_id' => $representative->id,
+    //                 'bank_id' => null, // لا يوجد بنك
+    //                 'status' => 'لا يمتلك حساب',
+    //                 'account_owner_name' => null, // فارغ
+    //                 'account_number' => null, // فارغ
+    //             ]);
+    //         } else {
+    //             // إذا كانت الحالة "يمتلك حساب"، نطلب جميع الحقول
+    //             $request->validate([
+    //                 'bank_id' => 'required|exists:banks,id',
+    //                 //'status' => 'required|in:يمتلك حساب',
+    //                 'account_owner_name' => 'required|string|max:255',
+    //                 'account_number' => 'required|string|max:255',
+    //             ]);
+
+    //             $bankAccount = \App\Models\BankAccount::create([
+    //                 'representative_id' => $representative->id,
+    //                 'bank_id' => $request->bank_id,
+    //                 //'status' => $request->status,
+    //                 'account_owner_name' => $request->account_owner_name,
+    //                 'account_number' => $request->account_number,
+    //             ]);
+    //         }
+
+    //         // Load bank relationship if exists
+    //         if ($bankAccount->bank_id) {
+    //             $bankAccount->load('bank');
+    //         }
+
+    //         return response()->json([
+    //             'message' => $bankAccount->status === 'لا يمتلك حساب'
+    //                 ? 'تم تسجيل الحالة بنجاح'
+    //                 : 'تم إنشاء الحساب البنكي بنجاح',
+    //             'status' => 'success',
+    //             'data' => [
+    //                 'id' => $bankAccount->id,
+    //                 'bank_id' => $bankAccount->bank_id,
+    //                 'bank_name' => $bankAccount->bank->name ?? null,
+    //                 'status' => $bankAccount->status,
+    //                 'account_owner_name' => $bankAccount->account_owner_name,
+    //                 'account_number' => $bankAccount->account_number,
+    //             ]
+    //         ], 201);
+
+    //     } catch (\Illuminate\Validation\ValidationException $e) {
+    //         return response()->json([
+    //             'message' => 'بيانات غير صالحة',
+    //             'status' => 'error',
+    //             'errors' => $e->errors()
+    //         ], 422);
+    //     } catch (\Exception $e) {
+    //         \Log::error('Error creating bank account from mobile: ' . $e->getMessage());
+    //         return response()->json([
+    //             'message' => 'حدث خطأ أثناء إنشاء الحساب البنكي',
+    //             'status' => 'error'
+    //         ], 500);
+    //     }
+    // }
+
+
+
     public function createBankAccount(Request $request)
     {
         try {
@@ -919,6 +1022,7 @@ class MobileRequestController extends Controller
             ], 500);
         }
     }
+
     public function getBankAccount(Request $request)
     {
         $user = $request->user();
@@ -943,6 +1047,7 @@ class MobileRequestController extends Controller
         $bankAccount->update($request->all());
         return response()->json(['message' => 'تم تحديث الحساب البنكي بنجاح']);
     }
+
 
     public function updateProfile(Request $request)
     {
@@ -1055,6 +1160,8 @@ class MobileRequestController extends Controller
 
         $user = $request->user();
 
+
+
         $dayOfMonth = now()->day;
         if ($dayOfMonth < 15 || $dayOfMonth > 20) {
             return response()->json(['message' => 'موعد السلفة من 15 ل 20 من كل شهر'], 422);
@@ -1064,6 +1171,9 @@ class MobileRequestController extends Controller
         if (!in_array($user->type, ['representative', 'supervisor'])) {
             return response()->json(['message' => 'يسمح فقط للمندوبين والمشرفين بطلب السلفة'], 403);
         }
+
+
+
         if ($user->type === 'representative' && $user->representative) {
             // منع أكثر من سلفة واحدة في نفس الشهر
             $hasAdvanceThisMonth = \App\Models\AdvanceRequest::where('representative_id', $user->representative->id)
@@ -1071,9 +1181,9 @@ class MobileRequestController extends Controller
                 ->whereYear('created_at', now()->year)
                 ->whereIn('status', ['approved'])
                 ->exists();
-            if ($hasAdvanceThisMonth) {
-                return response()->json(['message' => 'لا يمكن طلب أكثر من سلفة واحدة في نفس الشهر'], 403);
-            }
+            // if ($hasAdvanceThisMonth) {
+            //     return response()->json(['message' => 'لا يمكن طلب أكثر من سلفة واحدة في نفس الشهر'], 403);
+            // }
             // $max = 20000 * 0.8;
             // if ($request->amount > $max) {
             //     return response()->json(['message' => 'المبلغ يتجاوز الحد الأقصى (80% من الراتب)'], 403);
@@ -1086,9 +1196,9 @@ class MobileRequestController extends Controller
                 ->whereYear('created_at', now()->year)
                 ->whereIn('status', ['pending','approved'])
                 ->exists();
-            if ($hasAdvanceThisMonth) {
-                return response()->json(['message' => 'لا يمكن طلب أكثر من سلفة واحدة في نفس الشهر'], 403);
-            }
+            // if ($hasAdvanceThisMonth) {
+            //     return response()->json(['message' => 'لا يمكن طلب أكثر من سلفة واحدة في نفس الشهر'], 403);
+            // }
             // $max = 20000 * 0.8;
             // if ($request->amount > $max) {
             //     return response()->json(['message' => 'المبلغ يتجاوز الحد الأقصى (80% من الراتب)'], 403);
@@ -1111,16 +1221,17 @@ class MobileRequestController extends Controller
 
         // ربط الطلب بنوع المستخدم المناسب
         if ($user->type === 'representative' && $user->representative) {
-            // Keep representative wallet synced with the wallet entered on advance request
+
+              // Keep representative wallet synced with the wallet entered on advance request
             $user->representative->update([
                 'bank_account' => $request->wallet_number,
             ]);
+
             $advanceData['representative_id'] = $user->representative->id;
         } elseif ($user->type === 'supervisor' && $user->supervisor) {
              $user->representative->update([
                 'bank_account' => $request->wallet_number,
             ]);
-
             $advanceData['supervisor_id'] = $user->supervisor->id;
         } else {
             return response()->json(['message' => 'لم يتم العثور على ملف المستخدم'], 404);
@@ -1207,7 +1318,6 @@ class MobileRequestController extends Controller
             $request->validate(['orders_count' => 'nullable|integer|min:0']);
             $depositData['orders_count'] = (int) $request->orders_count;
         }
-
 
         // ربط الإيداع بنوع المستخدم المناسب
         if ($user->type === 'representative' && $user->representative) {
@@ -1309,7 +1419,8 @@ class MobileRequestController extends Controller
         if ($user->type === 'representative' && $user->representative) {
             $depositData['representative_id'] = $user->representative->id;
         } elseif ($user->type === 'supervisor' && $user->supervisor) {
-            $depositData['supervisor_id'] = $user->supervisor->id;
+            //$depositData['supervisor_id'] = $user->supervisor->id;
+            $depositData['representative_id'] = $user->representative->id;
         } else {
             return response()->json(['message' => 'لم يتم العثور على ملف المستخدم'], 404);
         }
@@ -1452,7 +1563,7 @@ class MobileRequestController extends Controller
                 $query->where('supervisor_id', $user->supervisor->id);
             }
         })
-        ->select(['id', 'amount', 'wallet_number', 'installment_months', 'monthly_installment', 'reason', 'status', 'rejection_reason', 'created_at', 'updated_at'])
+        ->select(['id', 'amount', 'installment_months', 'monthly_installment', 'reason', 'status', 'rejection_reason', 'created_at', 'updated_at'])
         ->orderBy('created_at', 'desc')
         ->get();
 
@@ -1575,7 +1686,7 @@ class MobileRequestController extends Controller
 
             'last_advance_request' => AdvanceRequest::where($whereClause)
                 ->orderBy('created_at', 'desc')
-                ->first(['id', 'amount', 'wallet_number', 'installment_months', 'monthly_installment', 'reason', 'rejection_reason', 'status', 'created_at']),
+                ->first(['id', 'amount', 'installment_months', 'monthly_installment', 'reason', 'rejection_reason', 'status', 'created_at']),
 
             'last_resignation_request' => ResignationRequest::where($whereClause)
                 ->orderBy('created_at', 'desc')
@@ -1639,8 +1750,18 @@ class MobileRequestController extends Controller
         };
         $date = now()->toDateString();
         $can_advance = false;
-        $allowed_dates = ['2025-09-14','2025-09-15','2025-09-16','2025-09-17','2025-09-18','2025-09-19','2025-09-20'];
-        if(in_array($date, $allowed_dates)){
+        // $allowed_dates = ['2025-10-14','2025-10-15','2025-10-16','2025-10-17','2025-10-18','2025-10-19','2025-10-20'];
+
+        // if(in_array($date, $allowed_dates)){
+        //     $can_advance = true;
+        // }
+
+        $today = now();
+        $day = $today->day;
+        $can_advance = false;
+
+        // السماح بطلب السلفة من يوم 15 إلى يوم 20 فقط
+        if ($day >= 15 && $day <= 20) {
             $can_advance = true;
         }
 
@@ -1650,7 +1771,7 @@ class MobileRequestController extends Controller
 
         $advanceRequest = \App\Models\AdvanceRequest::where($filterByUser)
             ->latest('created_at')
-            ->first(['id', 'amount', 'wallet_number', 'installment_months', 'monthly_installment', 'status', 'rejection_reason', 'created_at']);
+            ->first(['id', 'amount', 'installment_months', 'monthly_installment', 'status', 'rejection_reason', 'created_at']);
 
         $resignationRequest = \App\Models\ResignationRequest::where($filterByUser)
             ->latest('created_at')

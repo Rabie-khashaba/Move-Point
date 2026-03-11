@@ -172,11 +172,27 @@ class RepresentativeService
                           "منه / 01111266019\n" .
                           "يوسف / 01026768707\n" .
                           "مؤمن / 01044446905\n\n" .
-
+                        //   "يرجى تسجيل الدخول وتغيير كلمة المرور.\n\n" .
+                        //   "شكراً لكم\n\n" .
                           "اطلب سلفتك الآن من التطبيق";
 
-                $whatsappService = app(\App\Services\WhatsAppService::class);
-                $whatsappService->send($data['phone'], $message);
+                // $whatsappService = app(\App\Services\WhatsAppService::class);
+                // $whatsappService->send($data['phone'], $message);
+
+
+            $employee = auth()->user()?->employee;
+            $deviceToken = $employee?->device?->device_token;
+
+            $whatsapp = app(\App\Services\WhatsAppServicebyair::class);
+            $result = $whatsapp->send(
+                $data['phone'],
+                $message ,
+                 null,
+                null,
+                $deviceToken
+            );
+
+
             } catch (\Exception $e) {
                 Log::error('Failed to send WhatsApp notification for representative: ' . $e->getMessage());
             }
@@ -214,6 +230,58 @@ class RepresentativeService
             ? json_decode($representative->attachments, true) ?? []
             : $representative->attachments;
     }
+
+
+            $inquiry = $representative->inquiry;
+
+        $existingInquiryFieldAttachments = [];
+        if ($inquiry && $inquiry->inquiry_field_attachments) {
+            $existingInquiryFieldAttachments = is_string($inquiry->inquiry_field_attachments)
+                ? json_decode($inquiry->inquiry_field_attachments, true) ?? []
+                : $inquiry->inquiry_field_attachments;
+        }
+
+        $existingInquirySecurityAttachments = [];
+        if ($inquiry && $inquiry->inquiry_security_attachments) {
+            $existingInquirySecurityAttachments = is_string($inquiry->inquiry_security_attachments)
+                ? json_decode($inquiry->inquiry_security_attachments, true) ?? []
+                : $inquiry->inquiry_security_attachments;
+        }
+
+        if (($data['inquiry_type'] ?? null) === 'security') {
+            $existingInquiryFieldAttachments = [];
+        }
+        if (($data['inquiry_type'] ?? null) === 'field') {
+            $existingInquirySecurityAttachments = [];
+        }
+
+        $storeInquiryAttachments = function (array $files, string $dir, string $typeLabel): array {
+            $stored = [];
+            foreach ($files as $file) {
+                if (!$file || !$file->isValid()) {
+                    continue;
+                }
+
+                $mime = $file->getMimeType();
+                $ext = strtolower($file->getClientOriginalExtension());
+                $allowedExt = ['jpg', 'jpeg', 'png', 'pdf'];
+                $allowedMime = ['image/jpeg', 'image/png', 'application/pdf'];
+
+                if (!in_array($ext, $allowedExt) || !in_array($mime, $allowedMime)) {
+                    continue;
+                }
+
+                $fileName = 'inq_' . time() . '_' . uniqid() . '.' . $ext;
+                $path = $file->storeAs($dir, $fileName, 'public');
+                $stored[] = [
+                    'type' => $typeLabel,
+                    'path' => $path,
+                ];
+            }
+            return $stored;
+        };
+
+
     $user = User::find($representative->user_id);
     $user->update([
         'name' => $data['name'],
@@ -239,7 +307,45 @@ class RepresentativeService
 
     $data['attachments'] = json_encode($existingAttachments);
 
+      $newInquiryFieldAttachments = $storeInquiryAttachments(
+            $data['inquiry_field_attachments'] ?? [],
+            'representatives/inquiry-field',
+            'استعلام ميداني'
+        );
+        if (!empty($newInquiryFieldAttachments)) {
+            $existingInquiryFieldAttachments = array_merge($existingInquiryFieldAttachments, $newInquiryFieldAttachments);
+        }
+        $data['inquiry_field_attachments'] = $existingInquiryFieldAttachments;
+
+        $newInquirySecurityAttachments = $storeInquiryAttachments(
+            $data['inquiry_security_attachments'] ?? [],
+            'representatives/inquiry-security',
+            'استعلام أمني'
+        );
+        if (!empty($newInquirySecurityAttachments)) {
+            $existingInquirySecurityAttachments = array_merge($existingInquirySecurityAttachments, $newInquirySecurityAttachments);
+        }
+        $data['inquiry_security_attachments'] = $existingInquirySecurityAttachments;
+
+        // Update representative record
+        $updatedRepresentative = $this->repository->update($representative, $data);
+
+        $updatedRepresentative->inquiry()->updateOrCreate(
+            ['representative_id' => $updatedRepresentative->id],
+            [
+                'inquiry_type' => $data['inquiry_type'] ?? null,
+                'inquiry_field_result' => $data['inquiry_field_result'] ?? null,
+                'inquiry_field_notes' => $data['inquiry_field_notes'] ?? null,
+                'inquiry_field_attachments' => $data['inquiry_field_attachments'] ?? [],
+                'inquiry_security_result' => $data['inquiry_security_result'] ?? null,
+                'inquiry_security_notes' => $data['inquiry_security_notes'] ?? null,
+                'inquiry_security_attachments' => $data['inquiry_security_attachments'] ?? [],
+                'security_inactive_reason' => $data['security_inactive_reason'] ?? null,
+            ]
+        );
+
     return $this->repository->update($representative, $data);
+
 }
 
     public function changePassword($id, $password)

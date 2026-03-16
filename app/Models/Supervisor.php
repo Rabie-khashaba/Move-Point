@@ -25,7 +25,7 @@ class Supervisor extends Model
         'address',
         'employee_id', */
         'company_id',
-        /* 'bank_account', */
+        'bank_account',
         'code',
        /*  'attachments', */
 

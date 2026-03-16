@@ -177,7 +177,7 @@
                                             <td>
                                                 {{ $advance->representative?->code ?? $advance->employee?->code ?? $advance->supervisor?->code ?? '-' }}
                                             </td>
-                                            <td>{{$advance->representative->bank_account ?? 'غير محدد'}}</td>
+                                            <td>{{$advance->representative->bank_account ?? $advance->supervisor?->bank_account ?? 'غير محدد'}}</td>
                                             <td>{{ number_format($advance->amount, 2) }} ج.م</td>
                                             <td>
                                                 @if($advance->is_installment)

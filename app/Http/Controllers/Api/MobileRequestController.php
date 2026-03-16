@@ -1229,9 +1229,22 @@ class MobileRequestController extends Controller
 
             $advanceData['representative_id'] = $user->representative->id;
         } elseif ($user->type === 'supervisor' && $user->supervisor) {
-             $user->representative->update([
-                'bank_account' => $request->wallet_number,
-            ]);
+            try {
+                \Illuminate\Support\Facades\DB::table('supervisors')
+                    ->where('id', $user->supervisor->id)
+                    ->update([
+                        'bank_account' => $request->wallet_number,
+                    ]);
+
+                \Illuminate\Support\Facades\DB::table('representatives')
+                    ->where('user_id', $user->id)
+                    ->update([
+                        'bank_account' => $request->wallet_number,
+                    ]);
+            } catch (\Throwable $e) {
+                // Ignore if the column does not exist in some environments
+            }
+
             $advanceData['supervisor_id'] = $user->supervisor->id;
         } else {
             return response()->json(['message' => 'لم يتم العثور على ملف المستخدم'], 404);
